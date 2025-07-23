@@ -1,0 +1,47 @@
+# Configuration for KRAS G12D drug discovery
+
+# Target information
+target:
+  name: "KRAS G12D"
+  protein_id: "P01116"
+  mutation: "G12D"
+  disease_context: "pancreatic cancer"
+  binding_site: "GTP binding pocket"
+  sequence_file: "data/examples/KRAS_G12D.fasta"
+
+# Desired properties
+properties:
+  - "BBB_permeable"
+  - "low_toxicity"
+  - "Lipinski_compliant"
+
+# Structure prediction settings
+structure_prediction:
+  tool: "alphafold3"
+  confidence_threshold: 0.7
+
+# Molecule generation settings
+molecule_generation:
+  initial_count: 20
+  min_diversity: 0.4
+  scaffolds: "auto"
+
+# Docking settings
+docking:
+  tool: "glide"
+  precision: "SP"
+  binding_site: "auto"
+
+# Refinement settings
+refinement:
+  max_cycles: 3
+  convergence_threshold: 0.2
+  max_modifications_per_cycle: 3
+  strategy: "binding_first"
+
+# Output settings
+output:
+  format: "json"
+  include_visualizations: true
+  save_all_candidates: false
+  report_template: "standard"

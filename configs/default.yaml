@@ -1,0 +1,82 @@
+# Default configuration for F.A.D.E
+
+# General settings
+project_name: "F.A.D.E"
+version: "0.1.0"
+
+# Pipeline configuration
+pipeline:
+  # Structure prediction settings
+  structure_prediction:
+    tool: "alphafold3"  # Options: alphafold3, esmfold
+    confidence_threshold: 0.7  # Minimum confidence score to accept
+    max_runtime_hours: 4
+    
+  # Molecule generation settings
+  molecule_generation:
+    initial_count: 50  # Number of initial molecules to generate
+    min_diversity: 0.4  # Minimum diversity score (0-1)
+    scaffolds: "auto"  # "auto" or list of specific scaffolds
+    
+  # Property evaluation settings
+  property_evaluation:
+    lipinski_strict: false  # Strict enforcement of Lipinski's rule
+    custom_filters:
+      - "rotatable_bonds <= 10"
+      - "num_rings >= 1"
+      - "molecular_weight < 500"
+    prediction_models:
+      - "bbb_permeability"
+      - "toxicity"
+      - "solubility"
+    
+  # Docking settings
+  docking:
+    tool: "glide"  # Options: glide, autodock
+    precision: "SP"  # Options: HTVS, SP, XP (for Glide)
+    exhaustiveness: 8  # For AutoDock Vina
+    binding_site: "auto"  # "auto" or specific residues
+    
+  # Refinement settings
+  refinement:
+    max_cycles: 5
+    convergence_threshold: 0.2  # Score improvement to continue
+    max_modifications_per_cycle: 3
+    strategy: "binding_first"  # Options: binding_first, property_first, balanced
+
+# LLM settings
+llm:
+  provider: "anthropic"  # Options: anthropic, openai
+  model: "claude-3-sonnet-20240229"  # Or GPT model
+  temperature: 0.2
+  max_tokens: 4000
+  system_prompt: "You are an expert medicinal chemist assisting with drug discovery."
+
+# Output settings
+output:
+  format: "json"  # Options: json, csv, both
+  include_visualizations: true
+  save_all_candidates: false  # If false, only save top candidates
+  report_template: "standard"  # Options: standard, detailed, minimal
+  
+# Job scheduling
+jobs:
+  partition: "gpu"
+  structure_prediction:
+    nodes: 1
+    gpus: 1
+    cpus: 4
+    memory: "32G"
+    time: "04:00:00"
+  docking:
+    nodes: 1
+    gpus: 0
+    cpus: 8
+    memory: "16G"
+    time: "02:00:00"
+  generation:
+    nodes: 1
+    gpus: 0
+    cpus: 2
+    memory: "8G"
+    time: "00:30:00"

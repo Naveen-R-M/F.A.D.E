@@ -1,0 +1,32 @@
+# Core dependencies
+python-dotenv>=1.0.0
+requests>=2.31.0
+pyyaml>=6.0.1
+numpy>=1.24.0
+pandas>=2.0.0
+langchain>=0.0.267
+langgraph>=0.0.21
+
+# LLM integration
+openai>=1.0.0
+anthropic>=0.5.0
+
+# Molecular modeling
+rdkit>=2023.3.1
+biopython>=1.81
+
+# Structure analysis
+biotite>=0.37.0
+pymol-open-source>=2.5.0
+
+# Visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Utilities
+tqdm>=4.66.0
+click>=8.1.0
+
+# Testing
+pytest>=7.3.1
+pytest-cov>=4.1.0

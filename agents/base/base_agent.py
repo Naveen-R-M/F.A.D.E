@@ -1,5 +1,5 @@
 """
-Base agent class for F.A.D.E framework.
+Base agent class for F.A.D.E
 """
 
 from abc import ABC, abstractmethod
@@ -8,10 +8,10 @@ from typing import Any, Dict, Optional
 
 class BaseAgent(ABC):
     """
-    Abstract base class for all agents in the F.A.D.E framework.
+    Abstract base class for all agents in the F.A.D.E
     
     This class defines the common interface and functionality that all agents
-    should implement, ensuring consistent behavior across the framework.
+    should implement, ensuring consistent behavior across F.A.D.E
     """
     
     def __init__(self, name: str, config: Optional[Dict[str, Any]] = None) -> None:

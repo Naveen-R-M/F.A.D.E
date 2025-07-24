@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Main entry point for F.A.D.E framework.
+Main entry point for F.A.D.E
 """
 
 import os
@@ -43,7 +43,7 @@ def parse_arguments() -> argparse.Namespace:
     Returns:
         Parsed arguments.
     """
-    parser = argparse.ArgumentParser(description="F.A.D.E: Framework for Agentic Drug Exploration")
+    parser = argparse.ArgumentParser(description="F.A.D.E: Fully Agentic Drug Engine")
     
     parser.add_argument(
         "--query", "-q",

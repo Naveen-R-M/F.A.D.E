@@ -1,5 +1,5 @@
 """
-UniProt API client for F.A.D.E framework.
+UniProt API client for F.A.D.E
 """
 
 import json

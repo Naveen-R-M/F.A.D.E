@@ -1,5 +1,5 @@
 """
-Target Selector Agent for F.A.D.E framework.
+Target Selector Agent for F.A.D.E
 
 This agent processes natural language queries to identify protein targets
 and drug requirements, and generates configuration files for downstream processes.
@@ -262,7 +262,7 @@ class TargetSelector(BaseAgent):
         data_dir = self.config.get("data_dir")
         
         if not data_dir:
-            # Try to determine the framework root directory
+            # Try to determine the root directory
             current_dir = os.path.dirname(os.path.abspath(__file__))
             root_dir = os.path.dirname(current_dir)
             data_dir = os.path.join(root_dir, "data")

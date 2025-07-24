@@ -1,5 +1,5 @@
 """
-Configuration file generator for F.A.D.E framework.
+Configuration file generator for F.A.D.E
 """
 
 import os
@@ -12,7 +12,7 @@ import jinja2
 class ConfigGenerator:
     """
     Generates configuration files and job scripts for downstream processes
-    in the F.A.D.E framework.
+    in the F.A.D.E
     """
     
     def __init__(self, template_dir: Optional[str] = None) -> None:
@@ -21,12 +21,12 @@ class ConfigGenerator:
         
         Args:
             template_dir: Directory containing template files. If not provided,
-                          defaults to the 'templates' directory within the framework.
+                          defaults to the 'templates' directory within F.A.D.E
         """
         if template_dir is None:
             # Get the directory where this script is located
             current_dir = os.path.dirname(os.path.abspath(__file__))
-            # Go one level up to find the framework root directory
+            # Go one level up to find the F.A.D.E root directory
             root_dir = os.path.dirname(current_dir)
             template_dir = os.path.join(root_dir, "workflows", "job_templates")
         

@@ -1,5 +1,5 @@
 """
-Gemini API client for F.A.D.E framework.
+Gemini API client for F.A.D.E
 """
 
 import os

@@ -129,7 +129,7 @@ If you use F.A.D.E in your research, please cite:
 ```
 @software{fade2025,
   author = {Your Name},
-  title = {F.A.D.E: Framework for Agentic Drug Exploration},
+  title = {F.A.D.E: Fully Agentic Drug Engine},
   year = {2025},
   url = {https://github.com/yourusername/fade}
 }

@@ -1,24 +1,24 @@
 # F.A.D.E Implementation Todo List
 
 ## Initial Project Setup
-- [x] Create conda environment (fade)
-- [x] Set up project structure
-- [x] Create README.md
-- [x] Create .gitignore
-- [x] Create .env.example
-- [x] Create .env file with API keys
+- ✅ Create conda environment (fade)
+- ✅ Set up project structure
+- ✅ Create README.md
+- ✅ Create .gitignore
+- ✅ Create .env.example
+- ✅ Create .env file with API keys
 
 ## Step 1: Target Selector Agent (Current Focus)
-- [x] Create base agent class (BaseAgent)
-- [x] Implement Gemini client utility
-- [x] Implement UniProt client utility
-- [x] Implement Config Generator utility
-- [x] Create job templates for structure prediction and docking
-- [x] Implement TargetSelector agent
-- [x] Create main script to demonstrate usage
-- [ ] Write unit tests for TargetSelector agent
-- [x] Install required packages for TargetSelector agent
-- [x] Test TargetSelector agent with example queries
+- ✅ Create base agent class (BaseAgent)
+- ✅ Implement Gemini client utility
+- ✅ Implement UniProt client utility
+- ✅ Implement Config Generator utility
+- ✅ Create job templates for structure prediction and docking
+- ✅ Implement TargetSelector agent
+- ✅ Create main script to demonstrate usage
+- ✅ Write unit tests for TargetSelector agent
+- ✅ Install required packages for TargetSelector agent
+- ✅ Test TargetSelector agent with example queries
 
 ## Step 2: Structure Predictor Agent (Next)
 - [ ] Implement StructurePredictor agent

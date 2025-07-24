@@ -1,29 +1,30 @@
 {
   "protein_targets": [
     {
-      "name": "HER2",
+      "name": "KRAS",
       "full_name": null,
       "organism": null,
-      "mutations": [],
+      "mutations": [
+        {
+          "original_residue": "G",
+          "position": 12,
+          "mutated_residue": "D"
+        }
+      ],
       "binding_sites": []
     }
   ],
   "molecule_properties": {
-    "blood_brain_barrier_permeability": null,
+    "blood_brain_barrier_permeability": true,
     "lipinski_rule_of_five": null,
     "toxicity_requirements": null,
     "solubility_requirements": null,
-    "other_requirements": "good pharmacokinetic properties and be selective for HER2 over other EGFR family members"
+    "other_requirements": null
   },
   "confidence": 0.8,
   "clarification_questions": [
-    "What is the full name of the HER2 protein?",
-    "What organism is the HER2 protein from?",
-    "Are there any specific mutations in HER2 that the inhibitors should target?",
-    "What are the specific binding sites on HER2 that the inhibitors should target?",
-    "What are the specific requirements for blood-brain barrier permeability?",
-    "What are the specific requirements for Lipinski's Rule of Five?",
-    "What are the specific toxicity requirements?",
-    "What are the specific solubility requirements?"
+    "What are the specific solubility and toxicity requirements for the molecules?",
+    "Are there any other desired molecule properties besides BBB permeability?",
+    "What is the desired organism for the KRAS target?"
   ]
 }

@@ -7,7 +7,6 @@ and drug requirements, and generates configuration files for downstream processe
 
 import os
 import json
-import logging
 from typing import Any, Dict, List, Optional, Tuple
 
 from agents.base.base_agent import BaseAgent
@@ -42,9 +41,6 @@ class TargetSelector(BaseAgent):
         self.gemini_client = GeminiClient(api_key=gemini_api_key)
         self.uniprot_client = UniProtClient()
         self.config_generator = ConfigGenerator()
-        
-        # Set up logging
-        self.logger = logging.getLogger(f"fade.agent.{name}")
         
     def process(self, input_data: str) -> Dict[str, Any]:
         """

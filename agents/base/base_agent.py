@@ -5,6 +5,8 @@ Base agent class for F.A.D.E
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
+from utils.logging import get_logger
+
 
 class BaseAgent(ABC):
     """
@@ -25,12 +27,11 @@ class BaseAgent(ABC):
         self.name = name
         self.config = config or {}
         self.logger = self._setup_logger()
-        
+        self.logger.info(f"Initialized {name} agent")
+    
     def _setup_logger(self):
         """Set up a logger for the agent."""
-        import logging
-        logger = logging.getLogger(f"fade.agent.{self.name}")
-        return logger
+        return get_logger(f"fade.agent.{self.name}")
     
     @abstractmethod
     def process(self, input_data: Any) -> Any:

@@ -1,0 +1,23 @@
+# F.A.D.E Test Queries
+# Format: One query per line
+
+# Basic query with single target and mutation
+Find molecules targeting KRAS G12D with good BBB permeability
+
+# Detailed query with multiple requirements
+I'm looking for potential drug candidates that could target the KRAS G12D mutant protein, which is implicated in pancreatic cancer. The molecules should be able to cross the blood-brain barrier, have low toxicity, and follow Lipinski's rule of five for drug-likeness.
+
+# Query with binding site specification
+Design inhibitors for KRAS G12D that bind to the GTP binding pocket and can cross the blood-brain barrier.
+
+# Different target with mutation
+Find molecules that inhibit BRAF V600E with good BBB permeability and low toxicity.
+
+# Query with multiple protein targets
+Develop dual inhibitors for both EGFR and HER2 that can cross the blood-brain barrier.
+
+# Target with specific organism
+Design compounds that block human ACE2 receptor binding to viral spike proteins while maintaining BBB permeability.
+
+# Query with complex property requirements
+Find KRAS G12D inhibitors with BBB permeability, water solubility above 100 mg/L, and metabolic stability with t1/2 > 3 hours in human liver microsomes.

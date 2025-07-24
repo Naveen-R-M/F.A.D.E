@@ -7,33 +7,34 @@ import os
 import sys
 import json
 import argparse
-import logging
 from typing import Any, Dict, Optional
 
 from dotenv import load_dotenv
+from utils.logging import setup_logging, get_logger
+from utils.summary import SummaryLogger
 from agents.target_selector import TargetSelector
 
 
-def setup_logging(log_level: str = "INFO") -> None:
+def setup_logging_with_output_dir(log_level: str = "INFO", output_dir: Optional[str] = None) -> None:
     """
-    Set up logging for the application.
+    Set up logging for the application with output directory integration.
     
     Args:
         log_level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL).
+        output_dir: Optional output directory where results will be saved.
+                   If provided, logs will also be stored in this directory.
     """
-    numeric_level = getattr(logging, log_level.upper(), None)
-    if not isinstance(numeric_level, int):
-        raise ValueError(f"Invalid log level: {log_level}")
+    # Determine logs directory based on output directory
+    logs_dir = "logs"
+    if output_dir:
+        logs_dir = os.path.join(output_dir, "logs")
     
-    logging.basicConfig(
-        level=numeric_level,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        handlers=[
-            logging.StreamHandler(),
-            logging.FileHandler("fade.log")
-        ]
-    )
+    # Set up structured logging
+    setup_logging(log_level=log_level, logs_dir=logs_dir)
+    
+    # Get the main logger
+    logger = get_logger("fade.main")
+    logger.info(f"Logging initialized with logs directory: {logs_dir}")
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -86,11 +87,25 @@ def process_query(query: str, output_dir: Optional[str] = None) -> Dict[str, Any
     Returns:
         Dictionary containing the results.
     """
+    # Get logger
+    logger = get_logger("fade.main")
+    
+    # Initialize summary logger if output directory is provided
+    summary_logger = None
+    if output_dir:
+        summary_logger = SummaryLogger(output_dir)
+        summary_logger.log_query(query)
+    
     # Initialize the Target Selector agent
     target_selector = TargetSelector()
     
     # Process the query
+    logger.info(f"Processing query: {query}")
     results = target_selector.process(query)
+    
+    # Log summary of target selector results
+    if summary_logger:
+        summary_logger.log_agent_result("target_selector", results)
     
     # Save results if output directory is provided
     if output_dir:
@@ -99,6 +114,11 @@ def process_query(query: str, output_dir: Optional[str] = None) -> Dict[str, Any
         
         with open(results_path, "w") as f:
             json.dump(results, f, indent=2)
+        logger.info(f"Results saved to: {results_path}")
+        
+        # Log final summary
+        if summary_logger:
+            summary_logger.log_final_summary({"target_selector": results})
     
     return results
 
@@ -111,37 +131,40 @@ def main() -> None:
     # Parse command-line arguments
     args = parse_arguments()
     
-    # Set up logging
-    setup_logging(args.log_level)
+    # Set up logging with output directory integration
+    setup_logging_with_output_dir(args.log_level, args.output_dir)
+    
+    # Get logger
+    logger = get_logger("fade.main")
     
     # Process query or batch file
     if args.query:
         # Process a single query
-        logging.info("Processing query: %s", args.query)
+        logger.info(f"Processing query: {args.query}")
         results = process_query(args.query, args.output_dir)
-        logging.info("Processing completed. Results saved to: %s", args.output_dir)
+        logger.info(f"Processing completed. Results saved to: {args.output_dir}")
         
     elif args.batch_file:
         # Process multiple queries from a batch file
         if not os.path.exists(args.batch_file):
-            logging.error("Batch file not found: %s", args.batch_file)
+            logger.error(f"Batch file not found: {args.batch_file}")
             sys.exit(1)
             
-        logging.info("Processing batch file: %s", args.batch_file)
+        logger.info(f"Processing batch file: {args.batch_file}")
         
         with open(args.batch_file, "r") as f:
-            queries = [line.strip() for line in f if line.strip()]
+            queries = [line.strip() for line in f if line.strip() and not line.startswith("#")]
             
         for i, query in enumerate(queries):
             query_output_dir = os.path.join(args.output_dir, f"query_{i+1}")
-            logging.info("Processing query %d/%d: %s", i+1, len(queries), query)
+            logger.info(f"Processing query {i+1}/{len(queries)}: {query}")
             process_query(query, query_output_dir)
             
-        logging.info("Batch processing completed. Results saved to: %s", args.output_dir)
+        logger.info(f"Batch processing completed. Results saved to: {args.output_dir}")
         
     else:
         # No query or batch file provided
-        logging.error("No query or batch file provided. Use --query or --batch-file.")
+        logger.error("No query or batch file provided. Use --query or --batch-file.")
         sys.exit(1)
 
 

@@ -1,4 +1,4 @@
-# F.A.D.E: Framework for Agentic Drug Exploration
+# F.A.D.E: Fully Agentic Drug Engine
 
 ![F.A.D.E Logo](https://via.placeholder.com/800x200?text=F.A.D.E)
 

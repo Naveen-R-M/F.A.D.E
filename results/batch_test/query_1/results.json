@@ -1,0 +1,58 @@
+{
+  "parsed_data": {
+    "protein_targets": [
+      {
+        "name": "KRAS",
+        "full_name": null,
+        "organism": null,
+        "mutations": [
+          {
+            "original_residue": "G",
+            "position": 12,
+            "mutated_residue": "D"
+          }
+        ],
+        "binding_sites": [
+          "GTP binding pocket"
+        ]
+      }
+    ],
+    "molecule_properties": {
+      "blood_brain_barrier_permeability": true,
+      "lipinski_rule_of_five": true,
+      "toxicity_requirements": "low toxicity",
+      "solubility_requirements": null,
+      "other_requirements": null
+    },
+    "confidence": 0.8,
+    "clarification_questions": [
+      "What is the specific organism of interest for KRAS?",
+      "Are there any specific solubility requirements for the drug candidates?",
+      "Are there any other requirements beyond those explicitly mentioned?"
+    ]
+  },
+  "sequences": {
+    "KRAS": {
+      "accession": "A0A250XVZ2",
+      "original_sequence": "MTEYKLVVVGAGGVGKSALTIQLIQNHFVDEYDPTIEDSYRKQVVIDGETCLLDILDTAGQEEYSAMRDQYMRTGEGFLCVFAINNTKSFEDIHHYREQIKRVKDSEDVPMVLVGNKCDLPSRTVDTKQAQDLARSYGIPFIETSAKTRQGVDDAFYTLVREIRKHKEKMSKDGKKKKKKSKTKCVIM",
+      "sequence": "MTEYKLVVVGADGVGKSALTIQLIQNHFVDEYDPTIEDSYRKQVVIDGETCLLDILDTAGQEEYSAMRDQYMRTGEGFLCVFAINNTKSFEDIHHYREQIKRVKDSEDVPMVLVGNKCDLPSRTVDTKQAQDLARSYGIPFIETSAKTRQGVDDAFYTLVREIRKHKEKMSKDGKKKKKKSKTKCVIM",
+      "length": 188,
+      "mutations": [
+        {
+          "original_residue": "G",
+          "position": 12,
+          "mutated_residue": "D"
+        }
+      ],
+      "organism": "Castor canadensis",
+      "protein_name": "small monomeric GTPase",
+      "gene_name": "KRAS"
+    }
+  },
+  "config_files": {
+    "KRAS_fasta": "/scratch/rajagopalmohanraj.n/F.A.D.E/data/inputs/sequences/KRAS.fasta",
+    "KRAS_alphafold_config": "/scratch/rajagopalmohanraj.n/F.A.D.E/data/inputs/configs/KRAS_alphafold.json",
+    "KRAS_alphafold_job": "/scratch/rajagopalmohanraj.n/F.A.D.E/data/inputs/job_scripts/KRAS_alphafold.sh",
+    "parsed_query": "/scratch/rajagopalmohanraj.n/F.A.D.E/data/inputs/configs/parsed_query.json"
+  }
+}

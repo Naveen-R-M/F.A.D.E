@@ -1,0 +1,58 @@
+{
+  "parsed_data": {
+    "protein_targets": [
+      {
+        "name": "EGFR",
+        "full_name": "Epidermal Growth Factor Receptor",
+        "organism": null,
+        "mutations": [
+          {
+            "original_residue": "T",
+            "position": 790,
+            "mutated_residue": "M"
+          }
+        ],
+        "binding_sites": [
+          "ATP binding site"
+        ]
+      }
+    ],
+    "molecule_properties": {
+      "blood_brain_barrier_permeability": null,
+      "lipinski_rule_of_five": true,
+      "toxicity_requirements": null,
+      "solubility_requirements": null,
+      "other_requirements": "oral bioavailability"
+    },
+    "confidence": 0.8,
+    "clarification_questions": [
+      "What is the desired level of selectivity over wild-type EGFR?",
+      "What are the specific requirements for oral bioavailability?",
+      "What are the specific drug-like properties that must be followed?"
+    ]
+  },
+  "sequences": {
+    "EGFR": {
+      "accession": "Q9WTS1",
+      "original_sequence": "MRPSGTARTKLLLLLAALCAAGGALEEK",
+      "sequence": "MRPSGTARTKLLLLLAALCAAGGALEEK",
+      "length": 28,
+      "mutations": [
+        {
+          "original_residue": "T",
+          "position": 790,
+          "mutated_residue": "M"
+        }
+      ],
+      "organism": "Rattus norvegicus",
+      "protein_name": "EGFR",
+      "gene_name": "EGFR"
+    }
+  },
+  "config_files": {
+    "EGFR_fasta": "/scratch/rajagopalmohanraj.n/F.A.D.E/data/inputs/sequences/EGFR.fasta",
+    "EGFR_alphafold_config": "/scratch/rajagopalmohanraj.n/F.A.D.E/data/inputs/configs/EGFR_alphafold.json",
+    "EGFR_alphafold_job": "/scratch/rajagopalmohanraj.n/F.A.D.E/data/inputs/job_scripts/EGFR_alphafold.sh",
+    "parsed_query": "/scratch/rajagopalmohanraj.n/F.A.D.E/data/inputs/configs/parsed_query.json"
+  }
+}

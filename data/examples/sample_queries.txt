@@ -1,0 +1,9 @@
+I'm looking for potential drug candidates that could target the KRAS G12D mutant protein, which is implicated in pancreatic cancer. The molecules should be able to cross the blood-brain barrier, have low toxicity, and follow Lipinski's rule of five for drug-likeness. I'm particularly interested in molecules that might bind to the GTP binding pocket of KRAS to inhibit its activity.
+
+Find molecules targeting EGFR T790M with good selectivity over wild-type EGFR. The molecules should have oral bioavailability and follow drug-like properties. I'm interested in molecules that bind to the ATP binding site.
+
+Design potential inhibitors for BRAF V600E that can penetrate the blood-brain barrier to treat melanoma brain metastases. The molecules should have low toxicity and good selectivity over wild-type BRAF.
+
+I need drug candidates targeting ACE2 to prevent SARS-CoV-2 infection without affecting normal ACE2 function in blood pressure regulation. The compounds should be orally available and have minimal side effects.
+
+Design allosteric inhibitors for the HER2 protein that can overcome resistance to current kinase inhibitors. The molecules should have good pharmacokinetic properties and be selective for HER2 over other EGFR family members.

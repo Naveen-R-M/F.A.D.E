@@ -1,0 +1,124 @@
+#!/bin/bash
+#SBATCH --job-name=dock_{{ receptor_name }}
+#SBATCH --output=%x_%j.out
+#SBATCH --error=%x_%j.err
+#SBATCH --partition={{ partition }}
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task={{ cpus }}
+#SBATCH --mem={{ memory }}
+#SBATCH --time={{ time }}
+{% if email %}
+#SBATCH --mail-user={{ email }}
+#SBATCH --mail-type=ALL
+{% endif %}
+
+# Load modules
+module load miniconda3/24.11.1
+module load schrodinger/2024-4
+
+# Set up environment
+source $(conda info --base)/etc/profile.d/conda.sh
+conda activate fade
+
+# Load configuration
+CONFIG_FILE="{{ config_file }}"
+RECEPTOR_NAME="{{ receptor_name }}"
+
+echo "Starting docking for ${RECEPTOR_NAME}"
+echo "Using configuration file: ${CONFIG_FILE}"
+
+# Parse configuration
+RECEPTOR_FILE=$(cat ${CONFIG_FILE} | jq -r '.receptor_file')
+LIGANDS_FILE=$(cat ${CONFIG_FILE} | jq -r '.ligands_file')
+OUTPUT_DIR=$(cat ${CONFIG_FILE} | jq -r '.output_dir')
+EXHAUSTIVENESS=$(cat ${CONFIG_FILE} | jq -r '.exhaustiveness')
+NUM_MODES=$(cat ${CONFIG_FILE} | jq -r '.num_modes')
+
+# Extract binding site info if available
+BINDING_CENTER=$(cat ${CONFIG_FILE} | jq -r '.binding_site_center // ""')
+BINDING_SIZE=$(cat ${CONFIG_FILE} | jq -r '.binding_site_size // ""')
+
+# Create output directory
+mkdir -p ${OUTPUT_DIR}
+
+# Prepare receptor
+echo "Preparing receptor..."
+RECEPTOR_MAE="${OUTPUT_DIR}/${RECEPTOR_NAME}_prepared.mae"
+$SCHRODINGER/utilities/prepwizard \
+    -WAIT \
+    -fillsidechains \
+    -disulfides \
+    -propka_pH 7.0 \
+    ${RECEPTOR_FILE} \
+    ${RECEPTOR_MAE}
+
+# Generate grid for docking
+echo "Generating grid..."
+GRID_FILE="${OUTPUT_DIR}/${RECEPTOR_NAME}_grid.zip"
+
+if [ ! -z "${BINDING_CENTER}" ] && [ ! -z "${BINDING_SIZE}" ]; then
+    # Extract binding site coordinates
+    X=$(echo ${BINDING_CENTER} | jq -r '.[0]')
+    Y=$(echo ${BINDING_CENTER} | jq -r '.[1]')
+    Z=$(echo ${BINDING_CENTER} | jq -r '.[2]')
+    
+    # Extract binding site dimensions
+    X_SIZE=$(echo ${BINDING_SIZE} | jq -r '.[0]')
+    Y_SIZE=$(echo ${BINDING_SIZE} | jq -r '.[1]')
+    Z_SIZE=$(echo ${BINDING_SIZE} | jq -r '.[2]')
+    
+    echo "Using specified binding site: center (${X}, ${Y}, ${Z}), size (${X_SIZE}, ${Y_SIZE}, ${Z_SIZE})"
+    
+    cat > ${OUTPUT_DIR}/grid.in << EOF_GRID
+GRID_CENTER  ${X}, ${Y}, ${Z}
+GRIDBOX_SIZE  ${X_SIZE}, ${Y_SIZE}, ${Z_SIZE}
+INNERBOX_SIZE  ${X_SIZE}/1.5, ${Y_SIZE}/1.5, ${Z_SIZE}/1.5
+OUTERBOX_SIZE  ${X_SIZE}, ${Y_SIZE}, ${Z_SIZE}
+RECEP_FILE  ${RECEPTOR_MAE}
+GRIDFILE  ${GRID_FILE}
+EOF_GRID
+else
+    echo "No binding site specified, detecting automatically..."
+    cat > ${OUTPUT_DIR}/grid.in << EOF_GRID
+RECEP_FILE  ${RECEPTOR_MAE}
+GRIDFILE  ${GRID_FILE}
+EOF_GRID
+fi
+
+$SCHRODINGER/glide ${OUTPUT_DIR}/grid.in -WAIT
+
+# Run docking
+echo "Running docking..."
+DOCKING_IN="${OUTPUT_DIR}/docking.in"
+DOCKING_OUT="${OUTPUT_DIR}/docking_out.maegz"
+
+cat > ${DOCKING_IN} << EOF_DOCK
+GRIDFILE  ${GRID_FILE}
+LIGANDFILE  ${LIGANDS_FILE}
+PRECISION  SP
+POSES_PER_LIG  ${NUM_MODES}
+WRITE_XP_DESC  no
+POSTDOCK_NPOSE  ${NUM_MODES}
+POSTDOCKSTRAIN  yes
+COMPRESS_POSES  yes
+NOSORT  yes
+OUTPUTDIR  ${OUTPUT_DIR}
+EOF_DOCK
+
+$SCHRODINGER/glide ${DOCKING_IN} -WAIT -NJOBS ${EXHAUSTIVENESS} -JOBNAME "dock_${RECEPTOR_NAME}"
+
+echo "Docking completed"
+
+# Extract and process results
+echo "Processing results..."
+$SCHRODINGER/utilities/glide_sort \
+    -o "${OUTPUT_DIR}/${RECEPTOR_NAME}_docking_results.csv" \
+    -pose "${OUTPUT_DIR}/${RECEPTOR_NAME}_best_poses.maegz" \
+    -property "r_i_docking_score,r_i_glide_gscore,r_i_glide_emodel" \
+    ${DOCKING_OUT}
+
+echo "Best poses saved to: ${OUTPUT_DIR}/${RECEPTOR_NAME}_best_poses.maegz"
+echo "Docking scores saved to: ${OUTPUT_DIR}/${RECEPTOR_NAME}_docking_results.csv"
+
+echo "Job completed"

@@ -1,0 +1,58 @@
+{
+  "parsed_data": {
+    "protein_targets": [
+      {
+        "name": "BRAF",
+        "full_name": null,
+        "organism": null,
+        "mutations": [
+          {
+            "original_residue": "V",
+            "position": 600,
+            "mutated_residue": "E"
+          }
+        ],
+        "binding_sites": []
+      }
+    ],
+    "molecule_properties": {
+      "blood_brain_barrier_permeability": true,
+      "lipinski_rule_of_five": null,
+      "toxicity_requirements": "low toxicity",
+      "solubility_requirements": null,
+      "other_requirements": "good selectivity over wild-type BRAF"
+    },
+    "confidence": 0.8,
+    "clarification_questions": [
+      "What is the full name of the BRAF protein?",
+      "What organism is the BRAF protein from?",
+      "What are the specific binding sites of the BRAF V600E mutation?",
+      "What are the specific Lipinski's Rule of Five requirements?",
+      "What are the specific solubility requirements?"
+    ]
+  },
+  "sequences": {
+    "BRAF": {
+      "accession": "A0A1A8UMF0",
+      "original_sequence": "MAALSSAESPPPVFNGDATELEPGRDRGLEELGTGLDSSCSSGIPGGPQDEEIWNIKQMIKLTQEHLEALLEKFGGEHNPPSIYLEAYEEYTSKLDALQQREQQLLEAMGNTTDFCTSSPTPGLLEVKMGGCGAGGAQAFPSAPSTLAVLQTPTDAGRANPRSPQKPIVRVFLPNKQRTVVPARCGMTVRDSLKKALMMRGLIPECCAVYRIQDGEKKPIDWDTDISWLTGEELHVEVLENVPLTTHNFVRKTFFTLAFCDFCRKLLFQGFRCQTCGYKFHQRCSTEVPLMCVNYDQLDLLLVSKFFEHHPFSQEEVSSEGTTPVSEVCPSLPPSDSIGSMCHTTVSPSKSIPIPASFRPNEEDHRNQFGQRDRSSSAPNVHINTIEPVNIDDLIRDQGLQRSDGGSTTGLSATPPASLPGSLTNVKVPQKSPCQQRERKSSSSSEDRNKMKTLGRRDSSDDWEIPEGQITLGQRIGSGSFGTVFKGKWHGDVAVKMLNVTAPTPQQLQAFKNEVGVLRKTRHVNILLFMGYTTKPQLAIVTQWCEGSSLYHHLHIIETKFEMIKLIDIARQTAQGMDYLHAKSIIHRDLKSNNIFLHEDLTVKIGDFGLATVKSRWSGSHQFEQLSGSILWMAPEVIRLQDKNPYSFQSDVYAFGIVLYELMSGALPYSNINNRDQIIFMVGRGYLSPDLSKVRSNCPKAMKRLMADCLKKKREERPLFPQILASIELLARSLPKIHRSASEPSLNRAGFQTEDFSLYACASPKTPIQAGGYGEFSAFK",
+      "sequence": "MAALSSAESPPPVFNGDATELEPGRDRGLEELGTGLDSSCSSGIPGGPQDEEIWNIKQMIKLTQEHLEALLEKFGGEHNPPSIYLEAYEEYTSKLDALQQREQQLLEAMGNTTDFCTSSPTPGLLEVKMGGCGAGGAQAFPSAPSTLAVLQTPTDAGRANPRSPQKPIVRVFLPNKQRTVVPARCGMTVRDSLKKALMMRGLIPECCAVYRIQDGEKKPIDWDTDISWLTGEELHVEVLENVPLTTHNFVRKTFFTLAFCDFCRKLLFQGFRCQTCGYKFHQRCSTEVPLMCVNYDQLDLLLVSKFFEHHPFSQEEVSSEGTTPVSEVCPSLPPSDSIGSMCHTTVSPSKSIPIPASFRPNEEDHRNQFGQRDRSSSAPNVHINTIEPVNIDDLIRDQGLQRSDGGSTTGLSATPPASLPGSLTNVKVPQKSPCQQRERKSSSSSEDRNKMKTLGRRDSSDDWEIPEGQITLGQRIGSGSFGTVFKGKWHGDVAVKMLNVTAPTPQQLQAFKNEVGVLRKTRHVNILLFMGYTTKPQLAIVTQWCEGSSLYHHLHIIETKFEMIKLIDIARQTAQGMDYLHAKSIIHRDLKSNNIFLHEELTVKIGDFGLATVKSRWSGSHQFEQLSGSILWMAPEVIRLQDKNPYSFQSDVYAFGIVLYELMSGALPYSNINNRDQIIFMVGRGYLSPDLSKVRSNCPKAMKRLMADCLKKKREERPLFPQILASIELLARSLPKIHRSASEPSLNRAGFQTEDFSLYACASPKTPIQAGGYGEFSAFK",
+      "length": 780,
+      "mutations": [
+        {
+          "original_residue": "V",
+          "position": 600,
+          "mutated_residue": "E"
+        }
+      ],
+      "organism": "Nothobranchius furzeri",
+      "protein_name": "non-specific serine/threonine protein kinase",
+      "gene_name": "BRAF"
+    }
+  },
+  "config_files": {
+    "BRAF_fasta": "/scratch/rajagopalmohanraj.n/F.A.D.E/data/inputs/sequences/BRAF.fasta",
+    "BRAF_alphafold_config": "/scratch/rajagopalmohanraj.n/F.A.D.E/data/inputs/configs/BRAF_alphafold.json",
+    "BRAF_alphafold_job": "/scratch/rajagopalmohanraj.n/F.A.D.E/data/inputs/job_scripts/BRAF_alphafold.sh",
+    "parsed_query": "/scratch/rajagopalmohanraj.n/F.A.D.E/data/inputs/configs/parsed_query.json"
+  }
+}

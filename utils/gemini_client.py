@@ -15,12 +15,14 @@ class GeminiClient:
     Client for interacting with the Google Gemini API.
     """
     
-    def __init__(self, api_key: Optional[str] = None) -> None:
+    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None) -> None:
         """
         Initialize the Gemini client.
         
         Args:
             api_key: Google Gemini API key. If not provided, it will be loaded from
+                environment variables.
+            model: Gemini model to use. If not provided, it will be loaded from
                 environment variables.
         """
         # Load environment variables from .env file
@@ -40,8 +42,9 @@ class GeminiClient:
         
         # Get available models
         self.models = genai.list_models()
-        # Using a Flash model which has higher quotas
-        self.default_model = "models/gemini-1.5-flash"
+        
+        # Use provided model or load from environment variables, with fallback
+        self.default_model = model or os.getenv("GEMINI_MODEL") or "models/gemini-1.5-flash"
         
     def get_available_models(self) -> List[str]:
         """

@@ -84,6 +84,14 @@ class TestTargetSelector(unittest.TestCase):
         self.assertIsNotNone(self.target_selector.gemini_client)
         self.assertIsNotNone(self.target_selector.uniprot_client)
         self.assertIsNotNone(self.target_selector.config_generator)
+        
+        # Test initialization with custom parameters
+        with patch('agents.target_selector.GeminiClient') as mock_gemini:
+            target_selector = TargetSelector(
+                gemini_api_key="test_key",
+                gemini_model="test_model"
+            )
+            mock_gemini.assert_called_once_with(api_key="test_key", model="test_model")
     
     def test_parse_query(self):
         """Test parsing of natural language query"""

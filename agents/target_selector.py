@@ -26,6 +26,7 @@ class TargetSelector(BaseAgent):
         name: str = "target_selector",
         config: Optional[Dict[str, Any]] = None,
         gemini_api_key: Optional[str] = None,
+        gemini_model: Optional[str] = None,
     ) -> None:
         """
         Initialize the Target Selector agent.
@@ -35,10 +36,12 @@ class TargetSelector(BaseAgent):
             config: Optional configuration parameters.
             gemini_api_key: API key for the Gemini model. If not provided,
                             it will be loaded from environment variables.
+            gemini_model: Model name for Gemini. If not provided,
+                          it will be loaded from environment variables.
         """
         super().__init__(name, config)
         
-        self.gemini_client = GeminiClient(api_key=gemini_api_key)
+        self.gemini_client = GeminiClient(api_key=gemini_api_key, model=gemini_model)
         self.uniprot_client = UniProtClient()
         self.config_generator = ConfigGenerator()
         

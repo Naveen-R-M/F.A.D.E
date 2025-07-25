@@ -20,6 +20,17 @@
 - ✅ Install required packages for TargetSelector agent
 - ✅ Test TargetSelector agent with example queries
 
+## Step 1B: Agentic Target Selector Enhancements
+- [ ] Design agentic architecture (see docs/design/agentic_target_selector.md)
+- [ ] Implement agentic mixin for base agent
+- [ ] Create error analysis component for API errors
+- [ ] Implement query reformulation for failed API calls
+- [ ] Add sequence validation for scientific accuracy
+- [ ] Create adaptive search strategy for protein retrieval
+- [ ] Integrate LLM-powered decision making
+- [ ] Update unit tests for agentic components
+- [ ] Benchmark agentic vs. non-agentic performance
+
 ## Step 2: Structure Predictor Agent (Next)
 - [ ] Implement StructurePredictor agent
 - [ ] Implement PDB file parser/processor

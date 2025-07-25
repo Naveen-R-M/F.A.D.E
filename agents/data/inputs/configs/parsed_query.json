@@ -1,0 +1,26 @@
+{
+  "protein_targets": [
+    {
+      "name": "KRAS",
+      "full_name": null,
+      "organism": "human",
+      "mutations": [
+        {
+          "original_residue": "G",
+          "position": 12,
+          "mutated_residue": "D"
+        }
+      ],
+      "binding_sites": null
+    }
+  ],
+  "molecule_properties": {
+    "blood_brain_barrier_permeability": true,
+    "lipinski_rule_of_five": null,
+    "toxicity_requirements": null,
+    "solubility_requirements": "water solubility above 100 mg/L",
+    "other_requirements": "metabolic stability with t1/2 > 3 hours in human liver microsomes"
+  },
+  "confidence": 1.0,
+  "clarification_questions": []
+}

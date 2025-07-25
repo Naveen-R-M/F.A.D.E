@@ -1,0 +1,11 @@
+{
+  "protein_name": "ACE2",
+  "sequence_file": "/scratch/rajagopalmohanraj.n/F.A.D.E/agents/data/inputs/sequences/ACE2.fasta",
+  "output_dir": "/scratch/rajagopalmohanraj.n/F.A.D.E/agents/data/outputs/structures/ACE2",
+  "max_template_date": "2025-01-01",
+  "use_gpu": true,
+  "model_preset": "monomer",
+  "db_preset": "full_dbs",
+  "num_recycle": 3,
+  "enable_amber_relax": true
+}

@@ -12,12 +12,6 @@ from typing import Any, Dict, Optional
 from dotenv import load_dotenv
 from utils.logging import setup_logging, get_logger
 from utils.summary import SummaryLogger
-# Updated import path for TargetSelector
-from agents.target_selector import TargetSelector
-
-from dotenv import load_dotenv
-from utils.logging import setup_logging, get_logger
-from utils.summary import SummaryLogger
 from agents.target_selector import TargetSelector
 
 # The import above is causing the issue - TargetSelector is now in agents/ not agents/target_selector/

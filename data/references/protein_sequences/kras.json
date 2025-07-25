@@ -1,0 +1,34 @@
+{
+  "name": "KRAS",
+  "alternative_names": ["K-RAS", "KRAS2", "Ki-ras", "c-Ki-ras2"],
+  "length": 189,
+  "length_tolerance": 2,
+  "organism": "Homo sapiens",
+  "key_residues": [
+    {
+      "position": 12,
+      "residue": "G",
+      "note": "Common mutation site G12D in cancer"
+    },
+    {
+      "position": 13,
+      "residue": "G",
+      "note": "Adjacent to G12 mutation site"
+    },
+    {
+      "position": 61,
+      "residue": "Q",
+      "note": "Common mutation site Q61 in cancer"
+    }
+  ],
+  "motifs": [
+    {
+      "pattern": "GAGGVGKS",
+      "description": "P-loop (G1) motif"
+    },
+    {
+      "pattern": "DTAGQ",
+      "description": "G3 motif"
+    }
+  ]
+}

@@ -1,17 +1,17 @@
 # F.A.D.E Pipeline Summary
 
-Date: 2025-07-24 19:07:41
+Date: 2025-07-24 20:05:07
 
 ## User Query
 
-Find molecules targeting KRAS G12D with good BBB permeability
+Find KRAS G12D inhibitors with BBB permeability, water solubility above 100 mg/L, and metabolic stability with t1/2 > 3 hours in human liver microsomes.
 
 ## Target Selector Results
 
-Identified KRAS with G12D mutation Retrieved KRAS sequence (A0A250XVZ2), 188 amino acids from Castor canadensis Required properties: BBB permeability Generated configuration files for structure prediction.
+Identified KRAS with G12D mutation Retrieved KRAS sequence (Q9BPZ7), 522 amino acids from Homo sapiens Required properties: BBB permeability, specific solubility requirements Generated configuration files for structure prediction.
 
 ## Pipeline Summary
 
 Pipeline progress: 1/6 agents completed
 
-Completed at: 2025-07-24 19:07:44
+Completed at: 2025-07-24 20:05:20

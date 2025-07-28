@@ -7,6 +7,9 @@ import os
 import sys
 import json
 import argparse
+import time
+import datetime
+import subprocess
 from typing import Any, Dict, Optional
 
 from dotenv import load_dotenv
@@ -78,6 +81,19 @@ def parse_arguments() -> argparse.Namespace:
         "--skip-structure-prediction",
         action="store_true",
         help="Skip the structure prediction step"
+    )
+    
+    parser.add_argument(
+        "--background",
+        action="store_true",
+        default=True,  # Default to running in background
+        help="Run the process in the background (default: True)"
+    )
+    
+    parser.add_argument(
+        "--foreground",
+        action="store_true",
+        help="Run the process in the foreground (overrides --background)"
     )
     
     return parser.parse_args()
@@ -164,6 +180,146 @@ def main() -> None:
     # Parse command-line arguments
     args = parse_arguments()
     
+    # Check if we should run in the background
+    if args.background and not args.foreground:
+        # Generate a unique output directory if not provided
+        if not args.output_dir:
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            args.output_dir = f"results_{timestamp}"
+        
+        # Create output directory
+        os.makedirs(args.output_dir, exist_ok=True)
+        
+        # Create log file
+        log_file = os.path.join(args.output_dir, "fade.log")
+        
+        # Build command for subprocess
+        cmd = [
+            sys.executable, os.path.abspath(__file__),
+            "--query", args.query,
+            "--output-dir", args.output_dir,
+            "--log-level", args.log_level,
+            "--foreground"  # Force foreground mode to avoid recursion
+        ]
+        
+        if args.skip_structure_prediction:
+            cmd.append("--skip-structure-prediction")
+        
+        # Start the process in background
+        with open(log_file, "w") as f:
+            # Write header to log file
+            f.write(f"F.A.D.E Job started at {datetime.datetime.now()}\n")
+            f.write(f"Query: {args.query}\n")
+            f.write(f"Output directory: {args.output_dir}\n")
+            f.write(f"Skip structure prediction: {args.skip_structure_prediction}\n\n")
+            f.flush()
+            
+            # Start the process in background
+            process = subprocess.Popen(
+                cmd,
+                stdout=f,
+                stderr=subprocess.STDOUT,
+                close_fds=True
+            )
+        
+        # Create a job info file
+        job_info_file = os.path.join(args.output_dir, "job_info.txt")
+        with open(job_info_file, "w") as f:
+            f.write(f"Job ID: {process.pid}\n")
+            f.write(f"Started at: {datetime.datetime.now()}\n")
+            f.write(f"Query: {args.query}\n")
+            f.write(f"Output directory: {args.output_dir}\n")
+            f.write(f"Log file: {log_file}\n")
+            f.write(f"Skip structure prediction: {args.skip_structure_prediction}\n")
+        
+        # Create a basic status checker
+        status_script = os.path.join(args.output_dir, "check_status.py")
+        with open(status_script, "w") as f:
+            f.write('''
+#!/usr/bin/env python3
+"""
+Simple status checker for F.A.D.E job
+"""
+
+import os
+import sys
+import time
+import json
+import subprocess
+
+# Get job info
+job_info_file = "job_info.txt"
+output_dir = os.path.dirname(os.path.abspath(__file__))
+log_file = os.path.join(output_dir, "fade.log")
+results_file = os.path.join(output_dir, "results.json")
+
+# Check if process is running
+with open(os.path.join(output_dir, job_info_file), "r") as f:
+    for line in f:
+        if line.startswith("Job ID:"):
+            pid = int(line.split(":", 1)[1].strip())
+            break
+
+def is_process_running(pid):
+    try:
+        # Cross-platform way to check if process is running
+        if os.name == "nt":  # Windows
+            return subprocess.call(["tasklist", "/FI", f"PID eq {pid}"], stdout=subprocess.DEVNULL) == 0
+        else:  # Unix
+            return os.path.exists(f"/proc/{pid}")
+    except Exception:
+        return False
+
+# Print status
+print(f"F.A.D.E Job Status Check - {time.ctime()}")
+print(f"Output directory: {output_dir}")
+
+if is_process_running(pid):
+    print(f"Status: RUNNING (PID: {pid})")
+    print("\nLast few log lines:")
+    try:
+        with open(log_file, "r") as f:
+            lines = f.readlines()
+            for line in lines[-10:]:
+                print(f"  {line.strip()}")
+    except Exception as e:
+        print(f"  Error reading log file: {e}")
+else:
+    if os.path.exists(results_file):
+        print("Status: COMPLETED")
+        print(f"Results file: {results_file}")
+        print(f"Results size: {os.path.getsize(results_file) / 1024:.1f} KB")
+    else:
+        print("Status: NOT RUNNING (possibly failed)")
+    
+    print("\nLast few log lines:")
+    try:
+        with open(log_file, "r") as f:
+            lines = f.readlines()
+            for line in lines[-10:]:
+                print(f"  {line.strip()}")
+    except Exception as e:
+        print(f"  Error reading log file: {e}")
+''')
+        
+        # Make the status script executable
+        os.chmod(status_script, 0o755)
+        
+        # Print status message
+        print(f"F.A.D.E job started in background mode:")
+        print(f"  Job ID: {process.pid}")
+        print(f"  Output directory: {args.output_dir}")
+        print(f"  Log file: {log_file}")
+        print("\nTo check status:")
+        print(f"  1. Run the status script: python {status_script}")
+        print(f"  2. View log file: tail -f {log_file}")
+        print(f"  3. Use the job monitor: python monitor_jobs.py {args.output_dir}")
+        print("\nYour job is now running in the background. You can close this terminal if needed.")
+        
+        # Exit - the job is now running in the background
+        return
+    
+    # If running in foreground mode, continue with normal execution
     # Set up logging with output directory integration
     setup_logging_with_output_dir(args.log_level, args.output_dir)
     

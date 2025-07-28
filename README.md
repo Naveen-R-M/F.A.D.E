@@ -58,19 +58,35 @@ singularity exec --nv /shared/container_repository/AlphaFold/alphafold3.sif pyth
 Run the main interface:
 
 ```bash
-python main.py
+python main.py --query "Find molecules targeting KRAS G12D with good BBB permeability"
 ```
 
-Or run via command line with a specific query:
+This will automatically run the process in the background and provide you with monitoring options. The results will be saved to a timestamped directory.
+
+To force running in the foreground (not recommended for long-running jobs):
 
 ```bash
-python main.py --query "Find molecules targeting KRAS G12D with good BBB permeability"
+python main.py --query "Find molecules targeting KRAS G12D with good BBB permeability" --foreground
 ```
 
 For batch processing:
 
 ```bash
 python main.py --batch-file queries.txt --output-dir results/
+```
+
+### Monitoring Background Jobs
+
+To monitor all running F.A.D.E jobs:
+
+```bash
+python monitor_jobs.py
+```
+
+To monitor a specific job:
+
+```bash
+python monitor_jobs.py results_20250728_123456
 ```
 
 ## Project Structure

@@ -8,7 +8,7 @@
 #SBATCH --cpus-per-task={{ cpus }}
 #SBATCH --gres=gpu:h200:1
 #SBATCH --mem={{ memory }}
-#SBATCH --time=04:00:00
+#SBATCH --time=02:00:00
 {% if email %}
 #SBATCH --mail-user={{ email }}
 #SBATCH --mail-type=ALL

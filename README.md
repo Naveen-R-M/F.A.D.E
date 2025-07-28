@@ -29,7 +29,7 @@ F.A.D.E is an agentic AI pipeline for discovering drug-like molecules targeting 
 
 1. Clone this repository to your HPC environment:
 ```bash
-git clone https://github.com/yourusername/fade.git
+git clone https://github.com/Naveen-R-M/F.A.D.E.git
 cd fade
 ```
 

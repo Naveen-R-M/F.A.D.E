@@ -9,7 +9,7 @@ import logging
 from dotenv import load_dotenv
 
 from agents.target_selector import TargetSelector
-from agents.structure_predictor import StructurePredictor
+from agents.structure_predictor.structure_predictor import StructurePredictor
 from utils.logging import setup_logging, get_logger
 
 # Configure logging

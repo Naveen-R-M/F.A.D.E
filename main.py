@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from utils.logging import setup_logging, get_logger
 from utils.summary import SummaryLogger
 from agents.target_selector import TargetSelector
-from agents.structure_predictor import StructurePredictor
+from agents.structure_predictor.structure_predictor import StructurePredictor
 
 
 def setup_logging_with_output_dir(log_level: str = "INFO", output_dir: Optional[str] = None) -> None:

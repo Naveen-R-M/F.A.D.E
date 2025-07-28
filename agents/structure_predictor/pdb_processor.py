@@ -11,7 +11,8 @@ import re
 import json
 from collections import defaultdict
 
-from Bio.PDB import PDBParser, PDBIO, Select, Structure, Chain, Residue, Atom, NeighborSearch
+from Bio.PDB import PDBParser, PDBIO, Select, Structure, Chain, Atom, NeighborSearch
+from Bio.PDB.Residue import Residue
 from Bio.PDB.PDBExceptions import PDBConstructionWarning
 import numpy as np
 import warnings
@@ -304,8 +305,8 @@ class PDBProcessor:
     
     def _estimate_secondary_structure(
         self, 
-        residue: Residue, 
-        chain_residues: List[Residue]
+        residue, 
+        chain_residues
     ) -> str:
         """
         Estimate secondary structure based on crude analysis.

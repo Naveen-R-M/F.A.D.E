@@ -1,7 +1,5 @@
 """
-Structure Predictor Agent Package
+Structure Predictor Package
 """
 
-from agents.structure_predictor.pdb_processor import PDBProcessor
-from agents.structure_predictor.structure_validator import StructureValidator
-from agents.structure_predictor.binding_site_detector import BindingSiteDetector
+from agents.structure_predictor.structure_predictor import StructurePredictor

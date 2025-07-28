@@ -131,7 +131,7 @@ If you use F.A.D.E in your research, please cite:
   author = {Your Name},
   title = {F.A.D.E: Fully Agentic Drug Engine},
   year = {2025},
-  url = {https://github.com/yourusername/fade}
+  url = {https://github.com/Naveen-R-M/F.A.D.E.git}
 }
 ```
 

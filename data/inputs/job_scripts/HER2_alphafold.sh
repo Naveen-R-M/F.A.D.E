@@ -1,14 +1,14 @@
 #!/bin/bash
 #SBATCH --job-name=af3_HER2
-#SBATCH --output=%x_%j.out
-#SBATCH --error=%x_%j.err
+#SBATCH --output=/scratch/rajagopalmohanraj.n/F.A.D.E/logs/%x_%j.out
+#SBATCH --error=/scratch/rajagopalmohanraj.n/F.A.D.E/logs/%x_%j.err
 #SBATCH --partition=gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --gres=gpu:1
-#SBATCH --mem=16G
-#SBATCH --time=24:00:00
+#SBATCH --gres=gpu:h200:1
+#SBATCH --mem=32G
+#SBATCH --time=04:00:00
 
 # Load modules
 module load miniconda3/24.11.1
@@ -18,12 +18,18 @@ module load schrodinger/2024-4
 source $(conda info --base)/etc/profile.d/conda.sh
 conda activate fade
 
+# Set AlphaFold3 paths - required for container execution
+export DATA_PATH=/shared/container_repository/AlphaFold/database
+export MODEL_PATH=/projects/SimBioSys/share/software/AF3/models
+
 # Load configuration
 CONFIG_FILE="/scratch/rajagopalmohanraj.n/F.A.D.E/data/inputs/configs/HER2_alphafold.json"
 PROTEIN_NAME="HER2"
 
 echo "Starting AlphaFold3 prediction for ${PROTEIN_NAME}"
 echo "Using configuration file: ${CONFIG_FILE}"
+echo "DATA_PATH: ${DATA_PATH}"
+echo "MODEL_PATH: ${MODEL_PATH}"
 
 # Parse configuration
 SEQUENCE_FILE=$(cat ${CONFIG_FILE} | jq -r '.sequence_file')
@@ -38,13 +44,18 @@ ENABLE_AMBER_RELAX=$(cat ${CONFIG_FILE} | jq -r '.enable_amber_relax')
 # Create output directory
 mkdir -p ${OUTPUT_DIR}
 
-# Run AlphaFold3 using Singularity container
+# Run AlphaFold3 using Singularity container with exported paths
 echo "Running AlphaFold3..."
 
-singularity exec --nv /shared/container_repository/AlphaFold/alphafold3.sif \
+singularity exec --nv \
+    --bind ${DATA_PATH}:/data \
+    --bind ${MODEL_PATH}:/models \
+    /shared/container_repository/AlphaFold/alphafold3.sif \
     python /app/alphafold/run_alphafold.py \
     --fasta_paths=${SEQUENCE_FILE} \
     --output_dir=${OUTPUT_DIR} \
+    --data_dir=/data \
+    --model_dir=/models \
     --max_template_date=${MAX_TEMPLATE_DATE} \
     --model_preset=${MODEL_PRESET} \
     --db_preset=${DB_PRESET} \
@@ -66,4 +77,4 @@ else
     echo "No best model found"
 fi
 
-echo "Job completed"
+echo "Job completed for ${PROTEIN_NAME}"

@@ -57,6 +57,28 @@ logs/
 *.sdf
 *.csv
 
+# Target Selector Agent Outputs (Step 1 - not needed in remote)
+# Generated configurations
+data/inputs/configs/*.json
+!data/inputs/configs/.gitkeep
+
+# Generated job scripts
+data/inputs/job_scripts/*.sh
+!data/inputs/job_scripts/.gitkeep
+
+# Processing results
+results/
+current_test/
+summary_test/
+test_results/
+
+# Agent memory files (contain runtime learning data)
+agents/data/memory/*.json
+!agents/data/memory/.gitkeep
+
+# Generated utility scripts
+#regenerate_scripts.py
+
 # IDE files
 .idea/
 .vscode/

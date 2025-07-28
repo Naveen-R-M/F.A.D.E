@@ -1,0 +1,2 @@
+# This file ensures the memory directory is tracked by git
+# while ignoring the runtime agent memory files

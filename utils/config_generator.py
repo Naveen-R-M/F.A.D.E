@@ -173,11 +173,12 @@ class ConfigGenerator:
         config_file: str,
         job_script_path: str,
         partition: str = "gpu",
-        memory: str = "16G",
+        memory: str = "32G",
         cpus: int = 8,
         gpus: int = 1,
-        time: str = "24:00:00",
+        time: str = "04:00:00",
         email: Optional[str] = None,
+        logs_dir: Optional[str] = None,
     ) -> None:
         """
         Create AlphaFold job configuration and script.
@@ -194,6 +195,7 @@ class ConfigGenerator:
             gpus: Number of GPUs to request.
             time: Time limit for the job.
             email: Email address for job notifications.
+            logs_dir: Directory where SLURM logs will be saved.
         """
         # Create AlphaFold configuration
         config = self.create_alphafold_config(
@@ -205,12 +207,23 @@ class ConfigGenerator:
         # Save configuration file
         self.save_config(config, config_file)
         
-        # Generate job script
+        # Determine logs directory
+        if logs_dir is None:
+            # Default to logs directory relative to F.A.D.E root
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            root_dir = os.path.dirname(current_dir)
+            logs_dir = os.path.join(root_dir, "logs")
+        
+        # Ensure logs directory exists
+        os.makedirs(logs_dir, exist_ok=True)
+        
+        # Generate job script with updated parameters
         self.generate_job_script(
             template_name="alphafold_job.sh.j2",
             output_path=job_script_path,
             protein_name=protein_name,
             config_file=config_file,
+            logs_dir=logs_dir,
             partition=partition,
             memory=memory,
             cpus=cpus,
@@ -234,6 +247,7 @@ class ConfigGenerator:
         cpus: int = 16,
         time: str = "12:00:00",
         email: Optional[str] = None,
+        logs_dir: Optional[str] = None,
     ) -> None:
         """
         Create molecular docking job configuration and script.
@@ -252,6 +266,7 @@ class ConfigGenerator:
             cpus: Number of CPUs to request.
             time: Time limit for the job.
             email: Email address for job notifications.
+            logs_dir: Directory where SLURM logs will be saved.
         """
         # Create docking configuration
         config = self.create_docking_config(
@@ -265,12 +280,23 @@ class ConfigGenerator:
         # Save configuration file
         self.save_config(config, config_file)
         
+        # Determine logs directory
+        if logs_dir is None:
+            # Default to logs directory relative to F.A.D.E root
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            root_dir = os.path.dirname(current_dir)
+            logs_dir = os.path.join(root_dir, "logs")
+        
+        # Ensure logs directory exists
+        os.makedirs(logs_dir, exist_ok=True)
+        
         # Generate job script
         self.generate_job_script(
             template_name="docking_job.sh.j2",
             output_path=job_script_path,
             receptor_name=receptor_name,
             config_file=config_file,
+            logs_dir=logs_dir,
             partition=partition,
             memory=memory,
             cpus=cpus,

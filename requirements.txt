@@ -5,6 +5,8 @@ requests>=2.31.0
 biopython>=1.83
 rdkit>=2023.9.5
 langgraph>=0.1.0
+scipy>=1.10.0
+matplotlib>=3.7.0
 
 # API Integration
 google-generativeai>=0.4.0

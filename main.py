@@ -12,21 +12,8 @@ from typing import Any, Dict, Optional
 from dotenv import load_dotenv
 from utils.logging import setup_logging, get_logger
 from utils.summary import SummaryLogger
-# Updated import path for TargetSelector
 from agents.target_selector import TargetSelector
-
-from dotenv import load_dotenv
-from utils.logging import setup_logging, get_logger
-from utils.summary import SummaryLogger
-from agents.target_selector import TargetSelector
-
-# The import above is causing the issue - TargetSelector is now in agents/ not agents/target_selector/
-# Let's fix that
-
-from dotenv import load_dotenv
-from utils.logging import setup_logging, get_logger
-from utils.summary import SummaryLogger
-from agents.target_selector import TargetSelector
+from agents.structure_predictor import StructurePredictor
 
 
 def setup_logging_with_output_dir(log_level: str = "INFO", output_dir: Optional[str] = None) -> None:
@@ -87,16 +74,23 @@ def parse_arguments() -> argparse.Namespace:
         help="Logging level"
     )
     
+    parser.add_argument(
+        "--skip-structure-prediction",
+        action="store_true",
+        help="Skip the structure prediction step"
+    )
+    
     return parser.parse_args()
 
 
-def process_query(query: str, output_dir: Optional[str] = None) -> Dict[str, Any]:
+def process_query(query: str, output_dir: Optional[str] = None, skip_structure_prediction: bool = False) -> Dict[str, Any]:
     """
     Process a natural language query through the F.A.D.E pipeline.
     
     Args:
         query: Natural language query describing the drug discovery goal.
         output_dir: Optional directory where results will be saved.
+        skip_structure_prediction: If True, skip the structure prediction step.
         
     Returns:
         Dictionary containing the results.
@@ -113,13 +107,38 @@ def process_query(query: str, output_dir: Optional[str] = None) -> Dict[str, Any
     # Initialize the Target Selector agent
     target_selector = TargetSelector()
     
-    # Process the query
-    logger.info(f"Processing query: {query}")
-    results = target_selector.process(query)
+    # Process the query with Target Selector
+    logger.info(f"Processing query with Target Selector: {query}")
+    target_selector_results = target_selector.process(query)
     
     # Log summary of target selector results
     if summary_logger:
-        summary_logger.log_agent_result("target_selector", results)
+        summary_logger.log_agent_result("target_selector", target_selector_results)
+    
+    # Initialize results dictionary
+    results = {
+        "target_selector": target_selector_results
+    }
+    
+    # Continue with Structure Predictor if not skipped
+    if not skip_structure_prediction:
+        # Initialize the Structure Predictor agent
+        structure_predictor = StructurePredictor()
+        
+        # Process results with Structure Predictor
+        logger.info("Processing with Structure Predictor")
+        structure_predictor_input = {
+            "sequences": target_selector_results.get("sequences", {}),
+            "job_configs": target_selector_results.get("config_files", {})
+        }
+        structure_predictor_results = structure_predictor.process(structure_predictor_input)
+        
+        # Add structure predictor results to the overall results
+        results["structure_predictor"] = structure_predictor_results
+        
+        # Log summary of structure predictor results
+        if summary_logger:
+            summary_logger.log_agent_result("structure_predictor", structure_predictor_results)
     
     # Save results if output directory is provided
     if output_dir:
@@ -132,7 +151,7 @@ def process_query(query: str, output_dir: Optional[str] = None) -> Dict[str, Any
         
         # Log final summary
         if summary_logger:
-            summary_logger.log_final_summary({"target_selector": results})
+            summary_logger.log_final_summary(results)
     
     return results
 
@@ -155,7 +174,7 @@ def main() -> None:
     if args.query:
         # Process a single query
         logger.info(f"Processing query: {args.query}")
-        results = process_query(args.query, args.output_dir)
+        results = process_query(args.query, args.output_dir, args.skip_structure_prediction)
         logger.info(f"Processing completed. Results saved to: {args.output_dir}")
         
     elif args.batch_file:
@@ -172,7 +191,7 @@ def main() -> None:
         for i, query in enumerate(queries):
             query_output_dir = os.path.join(args.output_dir, f"query_{i+1}")
             logger.info(f"Processing query {i+1}/{len(queries)}: {query}")
-            process_query(query, query_output_dir)
+            process_query(query, query_output_dir, args.skip_structure_prediction)
             
         logger.info(f"Batch processing completed. Results saved to: {args.output_dir}")
         

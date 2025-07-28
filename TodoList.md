@@ -8,7 +8,7 @@
 - ✅ Create .env.example
 - ✅ Create .env file with API keys
 
-## Step 1: Target Selector Agent (Current Focus)
+## Step 1: Target Selector Agent (Completed)
 - ✅ Create base agent class (BaseAgent)
 - ✅ Implement Gemini client utility
 - ✅ Implement UniProt client utility
@@ -20,7 +20,7 @@
 - ✅ Install required packages for TargetSelector agent
 - ✅ Test TargetSelector agent with example queries
 
-## Step 1B: Agentic Target Selector Enhancements
+## Step 1B: Agentic Target Selector Enhancements (Completed)
 - ✅ Design agentic architecture (see docs/design/agentic_target_selector.md)
 - ✅ Implement agentic mixin for base agent
 - ✅ Create error analysis component for API errors
@@ -31,15 +31,15 @@
 - ✅ Update unit tests for agentic components
 - ✅ Benchmark agentic vs. non-agentic performance
 
-## Step 2: Structure Predictor Agent (Next)
-- [ ] Implement StructurePredictor agent
-- [ ] Implement PDB file parser/processor
-- [ ] Create structure validation utilities
-- [ ] Implement binding site detection
-- [ ] Write unit tests for StructurePredictor agent
-- [ ] Test StructurePredictor agent with example proteins
+## Step 2: Structure Predictor Agent (Completed)
+- ✅ Implement StructurePredictor agent
+- ✅ Implement PDB file parser/processor
+- ✅ Create structure validation utilities
+- ✅ Implement binding site detection
+- ✅ Write unit tests for StructurePredictor agent
+- ✅ Test StructurePredictor agent with example proteins
 
-## Step 3: Molecule Generator Agent
+## Step 3: Molecule Generator Agent (Next)
 - [ ] Implement MoleculeGenerator agent
 - [ ] Integrate with RDKit
 - [ ] Implement molecule property calculators

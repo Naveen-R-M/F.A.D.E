@@ -234,8 +234,7 @@ def main() -> None:
         
         # Create a basic status checker
         status_script = os.path.join(args.output_dir, "check_status.py")
-        with open(status_script, "w") as f:
-            f.write('''
+        status_script_content = '''
 #!/usr/bin/env python3
 """
 Simple status checker for F.A.D.E job
@@ -300,7 +299,11 @@ else:
                 print(f"  {line.strip()}")
     except Exception as e:
         print(f"  Error reading log file: {e}")
-''')
+'''
+        
+        # Write the status script
+        with open(status_script, "w") as f:
+            f.write(status_script_content)
         
         # Make the status script executable
         os.chmod(status_script, 0o755)

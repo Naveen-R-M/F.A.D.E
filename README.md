@@ -1,4 +1,19 @@
-# F.A.D.E: Fully Agentic Drug Engine
+### Running on HPC Clusters
+
+For better compatibility with HPC environments, you can use the provided shell script:
+
+```bash
+chmod +x run_fade.sh
+./run_fade.sh "Find molecules targeting KRAS G12D with good BBB permeability"
+```
+
+To skip the structure prediction step:
+
+```bash
+./run_fade.sh "Find molecules targeting KRAS G12D with good BBB permeability" --skip-structure-prediction
+```
+
+This script uses `nohup` to ensure the job continues running even if your SSH session disconnects.# F.A.D.E: Fully Agentic Drug Engine
 
 ![F.A.D.E Logo](https://via.placeholder.com/800x200?text=F.A.D.E)
 
@@ -88,6 +103,23 @@ To monitor a specific job:
 ```bash
 python monitor_jobs.py results_20250728_123456
 ```
+
+### Running on HPC Clusters
+
+For better compatibility with HPC environments, you can use the provided shell script:
+
+```bash
+chmod +x run_fade.sh
+./run_fade.sh "Find molecules targeting KRAS G12D with good BBB permeability"
+```
+
+To skip the structure prediction step:
+
+```bash
+./run_fade.sh "Find molecules targeting KRAS G12D with good BBB permeability" --skip-structure-prediction
+```
+
+This script uses `nohup` to ensure the job continues running even if your SSH session disconnects.
 
 ## Project Structure
 

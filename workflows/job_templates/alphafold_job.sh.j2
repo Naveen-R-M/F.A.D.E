@@ -90,7 +90,7 @@ singularity exec --nv \
     python /app/alphafold/run_alphafold.py \
     --json_path=/output/$(basename ${AF3_INPUT_JSON}) \
     --output_dir=/output \
-    --data_dir=/data \
+    --db_dir=/data \
     --model_dir=/models
 
 echo "AlphaFold3 prediction completed"

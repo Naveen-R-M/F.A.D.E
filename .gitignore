@@ -81,6 +81,14 @@ agents/data/memory/*.json
 # Generated utility scripts
 #regenerate_scripts.py
 
+# Agent-specific input data (generated during runtime)
+agents/data/inputs/configs/*.json
+!agents/data/inputs/configs/.gitkeep
+agents/data/inputs/job_scripts/*.sh
+!agents/data/inputs/job_scripts/.gitkeep
+agents/data/inputs/sequences/*
+!agents/data/inputs/sequences/.gitkeep
+
 # IDE files
 .idea/
 .vscode/

@@ -1,96 +1,95 @@
 {
-  "parsed_data": {
-    "protein_targets": [
-      {
-        "name": "KRAS",
-        "full_name": null,
-        "organism": null,
-        "mutations": [
-          {
-            "original_residue": "G",
-            "position": 12,
-            "mutated_residue": "D"
-          }
-        ],
-        "binding_sites": null
-      }
-    ],
-    "molecule_properties": {
-      "blood_brain_barrier_permeability": true,
-      "lipinski_rule_of_five": null,
-      "toxicity_requirements": null,
-      "solubility_requirements": null,
-      "other_requirements": null
-    },
-    "confidence": 0.95,
-    "clarification_questions": [
-      "What is the target organism for KRAS (e.g., human, mouse)?",
-      "Are there any other desired molecule properties besides BBB permeability?"
-    ]
-  },
-  "sequences": {
-    "KRAS": {
-      "accession": "A0A250XVZ2",
-      "original_sequence": "MTEYKLVVVGAGGVGKSALTIQLIQNHFVDEYDPTIEDSYRKQVVIDGETCLLDILDTAGQEEYSAMRDQYMRTGEGFLCVFAINNTKSFEDIHHYREQIKRVKDSEDVPMVLVGNKCDLPSRTVDTKQAQDLARSYGIPFIETSAKTRQGVDDAFYTLVREIRKHKEKMSKDGKKKKKKSKTKCVIM",
-      "sequence": "MTEYKLVVVGADGVGKSALTIQLIQNHFVDEYDPTIEDSYRKQVVIDGETCLLDILDTAGQEEYSAMRDQYMRTGEGFLCVFAINNTKSFEDIHHYREQIKRVKDSEDVPMVLVGNKCDLPSRTVDTKQAQDLARSYGIPFIETSAKTRQGVDDAFYTLVREIRKHKEKMSKDGKKKKKKSKTKCVIM",
-      "length": 188,
-      "mutations": [
+  "target_selector": {
+    "parsed_data": {
+      "protein_targets": [
         {
-          "original_residue": "G",
-          "position": 12,
-          "mutated_residue": "D"
+          "name": "spike protein",
+          "full_name": "spike protein of SARSCoV2 (Delta Variant)",
+          "organism": "SARSCoV2",
+          "mutations": [],
+          "binding_sites": [
+            "receptor binding domain"
+          ]
         }
       ],
-      "organism": "Castor canadensis",
-      "protein_name": "small monomeric GTPase",
-      "gene_name": "KRAS",
-      "validation_results": {
-        "protein_name": "KRAS",
-        "sequence_length": 188,
-        "checks": {
-          "valid_amino_acids": {
-            "pass": true,
-            "message": "Sequence contains only valid amino acid codes",
-            "severity": "none",
-            "details": {}
-          },
-          "sequence_length": {
-            "pass": true,
-            "message": "Sequence length (188) is within expected range (187-191)",
-            "severity": "none",
-            "details": {
-              "length": 188,
-              "expected_length": 189,
-              "tolerance": 2
+      "molecule_properties": {
+        "blood_brain_barrier_permeability": null,
+        "lipinski_rule_of_five": null,
+        "toxicity_requirements": null,
+        "solubility_requirements": null,
+        "other_requirements": null
+      },
+      "confidence": 1.0,
+      "clarification_questions": [
+        "What are the specific mutations associated with the Delta Variant's spike protein that should be considered?"
+      ]
+    },
+    "sequences": {
+      "spike protein": {
+        "accession": "H9MG28",
+        "original_sequence": "NIPSGIKFLPGIVDDNKMAMYTASLIGGMAMGSITSAVAVPFSMQVQARLNYVALQTDVLQENQKILANAFNNAIGNITLALGKVSNAITTISDGFNTMASALTKIQSVVNQQGEALSQLTSQLQKNFQAISSSIAEIYNRLEKVEADAHVDRLITGRLAALNAYVSQTLTQYAEVKASRQLAMEKV",
+        "sequence": "NIPSGIKFLPGIVDDNKMAMYTASLIGGMAMGSITSAVAVPFSMQVQARLNYVALQTDVLQENQKILANAFNNAIGNITLALGKVSNAITTISDGFNTMASALTKIQSVVNQQGEALSQLTSQLQKNFQAISSSIAEIYNRLEKVEADAHVDRLITGRLAALNAYVSQTLTQYAEVKASRQLAMEKV",
+        "length": 187,
+        "mutations": [],
+        "organism": "Feline coronavirus",
+        "protein_name": "spike protein",
+        "gene_name": "spike protein",
+        "validation_results": {
+          "protein_name": "spike protein",
+          "sequence_length": 187,
+          "checks": {
+            "valid_amino_acids": {
+              "pass": true,
+              "message": "Sequence contains only valid amino acid codes",
+              "severity": "none",
+              "details": {}
+            },
+            "sequence_length": {
+              "pass": true,
+              "message": "Sequence length (187 aa) is within reasonable range for a protein",
+              "severity": "none",
+              "details": {
+                "length": 187
+              }
+            },
+            "key_residues": {
+              "pass": true,
+              "message": "No key residues defined for this protein",
+              "severity": "none",
+              "details": {}
+            },
+            "motifs": {
+              "pass": true,
+              "message": "No specific motifs defined for this protein",
+              "severity": "none",
+              "details": {}
             }
           },
-          "key_residues": {
-            "pass": true,
-            "message": "Sequence contains all 3 key residues",
-            "severity": "none",
-            "details": {
-              "total_key_residues": 3
-            }
-          },
-          "motifs": {
-            "pass": true,
-            "message": "Sequence contains all 2 expected motifs",
-            "severity": "none",
-            "details": {
-              "total_motifs": 2
-            }
+          "overall_score": 0.8,
+          "warnings": [],
+          "errors": [],
+          "llm_validation": {
+            "is_valid": true,
+            "confidence_score": 0.5,
+            "issues": [],
+            "key_observations": [
+              "Failed to parse LLM response"
+            ],
+            "suggestions": []
           }
-        },
-        "overall_score": 1.0,
-        "warnings": [],
-        "errors": []
+        }
       }
+    },
+    "config_files": {
+      "spike protein_fasta": "/scratch/rajagopalmohanraj.n/F.A.D.E/agents/data/inputs/sequences/spike protein.fasta",
+      "spike protein_alphafold_config": "/scratch/rajagopalmohanraj.n/F.A.D.E/agents/data/inputs/configs/spike protein_alphafold.json",
+      "spike protein_alphafold_job": "/scratch/rajagopalmohanraj.n/F.A.D.E/agents/data/inputs/job_scripts/spike protein_alphafold.sh",
+      "parsed_query": "/scratch/rajagopalmohanraj.n/F.A.D.E/agents/data/inputs/configs/parsed_query.json"
     }
   },
-  "config_files": {
-    "KRAS_fasta": "/scratch/rajagopalmohanraj.n/F.A.D.E/agents/data/inputs/sequences/KRAS.fasta",
-    "KRAS_alphafold_config": "/scratch/rajagopalmohanraj.n/F.A.D.E/agents/data/inputs/configs/KRAS_alphafold.json",
-    "KRAS_alphafold_job": "/scratch/rajagopalmohanraj.n/F.A.D.E/agents/data/inputs/job_scripts/KRAS_alphafold.sh",
-    "parsed_query": "/scratch/rajagopalmohanraj.n/F.A.D.E/agents/data/inputs/configs/parsed_query.json"
+  "structure_predictor": {
+    "structures": {},
+    "binding_sites": {},
+    "prepared_structures": {}
   }
 }

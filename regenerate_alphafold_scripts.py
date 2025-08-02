@@ -49,10 +49,13 @@ def regenerate_alphafold_scripts():
         
         # Generate new job script
         try:
-            job_script_path = config_gen.generate_alphafold_job_script(
+            job_script_path = os.path.join(job_script_dir, f"{protein_name}_alphafold.sh")
+            config_gen.create_alphafold_job(
                 protein_name=protein_name,
+                sequence_file=config['sequence_file'],
+                output_dir=config['output_dir'],
                 config_file=str(config_file),
-                output_dir=job_script_dir
+                job_script_path=job_script_path
             )
             
             print(f"  ✅ Generated: {job_script_path}")

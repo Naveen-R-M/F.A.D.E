@@ -1,6 +1,6 @@
 # F.A.D.E Pipeline Summary
 
-Date: 2025-07-25 19:51:40
+Date: 2025-08-02 19:35:37
 
 ## User Query
 
@@ -10,8 +10,3 @@ Find molecules targeting KRAS G12D with good BBB permeability
 
 Identified KRAS with G12D mutation Retrieved KRAS sequence (A0A250XVZ2), 188 amino acids from Castor canadensis Required properties: BBB permeability Generated configuration files for structure prediction.
 
-## Pipeline Summary
-
-Pipeline progress: 1/6 agents completed
-
-Completed at: 2025-07-25 19:51:50

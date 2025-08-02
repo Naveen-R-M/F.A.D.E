@@ -7,5 +7,12 @@
   "model_preset": "monomer",
   "db_preset": "full_dbs",
   "num_recycle": 3,
-  "enable_amber_relax": true
+  "enable_amber_relax": true,
+  "model_seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ]
 }

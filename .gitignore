@@ -71,6 +71,8 @@ results/
 current_test/
 summary_test/
 test_results/
+results/summary.log
+results/results.json
 
 # Agent memory files (contain runtime learning data)
 agents/data/memory/*.json
@@ -88,3 +90,4 @@ agents/data/memory/*.json
 # OS specific files
 .DS_Store
 Thumbs.db
+\n# Ignore contents of data input directories\ndata/inputs/job_scripts/*\ndata/inputs/configs/*\ndata/inputs/sequences/*\n

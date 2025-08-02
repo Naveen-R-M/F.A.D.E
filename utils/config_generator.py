@@ -46,6 +46,7 @@ class ConfigGenerator:
         use_gpu: bool = True,
         num_recycle: int = 3,
         enable_amber_relax: bool = True,
+        model_seeds: List[int] = [0, 1, 2, 3, 4],
     ) -> Dict[str, Any]:
         """
         Create configuration for AlphaFold structure prediction.
@@ -58,6 +59,7 @@ class ConfigGenerator:
             use_gpu: Whether to use GPU for prediction.
             num_recycle: Number of recycle iterations for AlphaFold.
             enable_amber_relax: Whether to perform AMBER relaxation on the predicted structure.
+            model_seeds: List of random seeds for AlphaFold models.
             
         Returns:
             AlphaFold configuration dictionary.
@@ -72,6 +74,7 @@ class ConfigGenerator:
             "db_preset": "full_dbs",
             "num_recycle": num_recycle,
             "enable_amber_relax": enable_amber_relax,
+            "model_seeds": model_seeds,
         }
         
         return config

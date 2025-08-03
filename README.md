@@ -27,6 +27,7 @@ F.A.D.E is an agentic AI pipeline for discovering drug-like molecules targeting 
 - **Multi-Agent Architecture**: Specialized agents handle different aspects of the discovery process
 - **HPC Integration**: Designed for high-performance computing environments
 - **State-of-the-Art Tools**: Utilizes AlphaFold3, RDKit, and Schrodinger Glide
+- **LLM-Guided Molecule Generation**: Generates novel molecules guided by large language models and RDKit
 - **Iterative Refinement**: Molecules are refined through multiple cycles of evaluation and improvement
 
 ## System Requirements
@@ -49,12 +50,21 @@ cd F.A.D.E.
 ```
 
 2. Create a conda environment:
-```bash
-module load miniconda3/24.11.1
-conda create -p $SCRATCH/conda-envs/fade python=3.9 -y
-conda activate $SCRATCH/conda-envs/fade
-pip install -r requirements.txt
-```
+
+   **For HPC (SLURM) environments:**
+   ```bash
+   module load miniconda3/24.11.1
+   conda create -p $SCRATCH/conda-envs/fade python=3.9 -y
+   conda activate $SCRATCH/conda-envs/fade
+   pip install -r requirements.txt
+   ```
+
+   **For local development (general Conda):**
+   ```bash
+   conda create -n fade python=3.9 -y
+   conda activate fade
+   pip install -r requirements.txt
+   ```
 
 3. Configure your environment:
 ```bash
@@ -70,7 +80,7 @@ singularity exec --nv /shared/container_repository/AlphaFold/alphafold3.sif pyth
 
 ## Usage
 
-Run the main interface:
+Run the main interface (defaults to background execution):
 
 ```bash
 python main.py --query "Find molecules targeting KRAS G12D with good BBB permeability"
@@ -126,19 +136,19 @@ This script uses `nohup` to ensure the job continues running even if your SSH se
 ```
 fade/
 ├── agents/               # Specialized agents for different tasks
-├── workflows/            # Pipeline orchestration and job templates
+├── configs/              # Configuration files (e.g., default parameters)
 ├── data/                 # Input/output data storage
 │   ├── inputs/           # User inputs and configurations
 │   ├── outputs/          # Generated results
 │   └── examples/         # Example configurations
-├── models/               # ML models for property prediction
-├── utils/                # Utility functions and helpers
-├── configs/              # Configuration files
 ├── logs/                 # Log files
+├── main.py               # Main entry point
+├── models/               # ML models for property prediction (future use)
 ├── requirements.txt      # Python dependencies
-├── setup.py              # Package setup
+├── tests/                # Unit and integration tests
 ├── .env                  # Environment variables (not in version control)
-└── main.py               # Main entry point
+├── utils/                # Utility functions and helpers
+└── workflows/            # Pipeline orchestration and job templates
 ```
 
 ## Workflow

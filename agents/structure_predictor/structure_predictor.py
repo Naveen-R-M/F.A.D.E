@@ -193,29 +193,34 @@ class StructurePredictor(BaseAgent, AgenticMixin):
             output_dir = os.path.join(data_dir, "outputs", "structures", target_name)
             
             # Get PDB file
-            pdb_file = self.alphafold_client.get_best_model_path(output_dir)
+            pdb_file = self.alphafold_client.get_best_model_path(output_dir, target_name)
             
             if not pdb_file or not os.path.exists(pdb_file):
                 self.logger.error("No PDB file found for %s", target_name)
                 return None
                 
+            # Get confidence scores and multimer info directly from AlphaFold output
+            confidence_scores_af = self.alphafold_client.get_confidence_scores(output_dir, target_name)
+            multimer_info_af = self.alphafold_client.get_multimer_info(output_dir, target_name)
+
             # Process PDB file
             structure_data = self.pdb_processor.parse_pdb(pdb_file)
             
-            # Validate structure
+            # Validate structure (this will still provide overall quality checks)
             validation_results = self.structure_validator.validate(
                 pdb_file, 
                 sequence_info.get("sequence", "")
             )
             
-            # Create structure info
+            # Create structure info, prioritizing AlphaFold's reported scores
             structure_info = {
                 "target_name": target_name,
                 "pdb_file": pdb_file,
                 "confidence_scores": {
-                    "overall": validation_results.get("overall_score", 0.0),
-                    "plddt": validation_results.get("plddt", 0.0),
-                    "ptm": validation_results.get("ptm", 0.0)
+                    "overall": confidence_scores_af.get("ranking_score", validation_results.get("overall_score", 0.0)) if confidence_scores_af else validation_results.get("overall_score", 0.0),
+                    "plddt": confidence_scores_af.get("avg_plddt", validation_results.get("plddt", 0.0)) if confidence_scores_af else validation_results.get("plddt", 0.0),
+                    "ptm": confidence_scores_af.get("ptm", validation_results.get("ptm", 0.0)) if confidence_scores_af else validation_results.get("ptm", 0.0),
+                    "iptm": multimer_info_af.get("iptm", None) if multimer_info_af else None
                 },
                 "validation_results": validation_results,
                 "chain_info": structure_data.get("chains", {}),

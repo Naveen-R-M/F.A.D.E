@@ -40,12 +40,12 @@
 - ✅ Test StructurePredictor agent with example proteins
 
 ## Step 3: Molecule Generator Agent (Next)
-- [ ] Implement MoleculeGenerator agent
-- [ ] Integrate with RDKit
-- [ ] Implement molecule property calculators
-- [ ] Create molecule filtering utilities
-- [ ] Write unit tests for MoleculeGenerator agent
-- [ ] Test MoleculeGenerator agent with example targets
+- ✅ Implement MoleculeGenerator agent
+- ✅ Integrate with RDKit
+- ✅ Implement molecule property calculators
+- ✅ Create molecule filtering utilities
+- ✅ Write unit tests for MoleculeGenerator agent
+- ✅ Test MoleculeGenerator agent with example targets
 
 ## Step 4: Evaluator Agent
 - [ ] Implement Evaluator agent

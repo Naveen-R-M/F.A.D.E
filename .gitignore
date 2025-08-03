@@ -77,6 +77,7 @@ results/results.json
 # Agent memory files (contain runtime learning data)
 agents/data/memory/*.json
 !agents/data/memory/.gitkeep
+data/memory/molecule_generator_memory.json
 
 # Generated utility scripts
 #regenerate_scripts.py

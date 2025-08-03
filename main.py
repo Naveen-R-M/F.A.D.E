@@ -17,6 +17,7 @@ from utils.logging import setup_logging, get_logger
 from utils.summary import SummaryLogger
 from agents.target_selector import TargetSelector
 from agents.structure_predictor.structure_predictor import StructurePredictor
+from agents.molecule_generator.molecule_generator import MoleculeGenerator
 
 
 def setup_logging_with_output_dir(log_level: str = "INFO", output_dir: Optional[str] = None) -> None:
@@ -155,6 +156,25 @@ def process_query(query: str, output_dir: Optional[str] = None, skip_structure_p
         # Log summary of structure predictor results
         if summary_logger:
             summary_logger.log_agent_result("structure_predictor", structure_predictor_results)
+
+        # Initialize the Molecule Generator agent
+        molecule_generator = MoleculeGenerator()
+
+        # Process results with Molecule Generator
+        logger.info("Processing with Molecule Generator")
+        molecule_generator_input = {
+            "prepared_structures": structure_predictor_results.get("prepared_structures", {}),
+            "binding_sites": structure_predictor_results.get("binding_sites", {}),
+            "parsed_query_data": target_selector_results.get("parsed_data", {}) # Pass parsed data for requirements
+        }
+        molecule_generator_results = molecule_generator.process(molecule_generator_input)
+
+        # Add molecule generator results to the overall results
+        results["molecule_generator"] = molecule_generator_results
+
+        # Log summary of molecule generator results
+        if summary_logger:
+            summary_logger.log_agent_result("molecule_generator", molecule_generator_results)
     
     # Save results if output directory is provided
     if output_dir:

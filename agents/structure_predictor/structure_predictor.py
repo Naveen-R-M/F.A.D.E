@@ -189,19 +189,316 @@ class StructurePredictor(BaseAgent, AgenticMixin):
                 return None
                 
             # Get output path from config
+            # The AlphaFoldClient expects the base output directory, not the full timestamped path.
+            # It will then find the timestamped subdirectory itself.
+            # The AlphaFoldClient expects the base output directory, not the full timestamped path.
+            # It will then find the timestamped subdirectory itself.
             data_dir = self._get_data_dir()
-            output_dir = os.path.join(data_dir, "outputs", "structures", target_name)
+            alphafold_base_output_dir = os.path.join(data_dir, "outputs", "structures", target_name)
             
             # Get PDB file
-            pdb_file = self.alphafold_client.get_best_model_path(output_dir, target_name)
+            pdb_file = self.alphafold_client.get_best_model_path(alphafold_base_output_dir, target_name)
             
             if not pdb_file or not os.path.exists(pdb_file):
                 self.logger.error("No PDB file found for %s", target_name)
                 return None
                 
             # Get confidence scores and multimer info directly from AlphaFold output
-            confidence_scores_af = self.alphafold_client.get_confidence_scores(output_dir, target_name)
-            multimer_info_af = self.alphafold_client.get_multimer_info(output_dir, target_name)
+            confidence_scores_af = self.alphafold_client.get_confidence_scores(alphafold_base_output_dir, target_name)
+            multimer_info_af = self.alphafold_client.get_multimer_info(alphafold_base_output_dir, target_name)
+
+            # Process PDB file
+            structure_data = self.pdb_processor.parse_pdb(pdb_file)
+            
+            # Validate structure (this will still provide overall quality checks)
+            validation_results = self.structure_validator.validate(
+                pdb_file, 
+                sequence_info.get("sequence", "")
+            )
+            
+            # Create structure info, prioritizing AlphaFold's reported scores
+            structure_info = {
+                "target_name": target_name,
+                "pdb_file": pdb_file,
+                "confidence_scores": {
+                    "overall": confidence_scores_af.get("ranking_score", validation_results.get("overall_score", 0.0)) if confidence_scores_af else validation_results.get("overall_score", 0.0),
+                    "plddt": confidence_scores_af.get("avg_plddt", validation_results.get("plddt", 0.0)) if confidence_scores_af else validation_results.get("plddt", 0.0),
+                    "ptm": confidence_scores_af.get("ptm", validation_results.get("ptm", 0.0)) if confidence_scores_af else validation_results.get("ptm", 0.0),
+                    "iptm": multimer_info_af.get("iptm", None) if multimer_info_af else None
+                },
+                "validation_results": validation_results,
+                "chain_info": structure_data.get("chains", {}),
+                "residue_count": structure_data.get("residue_count", 0),
+                "atom_count": structure_data.get("atom_count", 0),
+                "secondary_structure": structure_data.get("secondary_structure", {})
+            }
+            
+            # Log structure summary
+            self.logger.info("Structure prediction for %s: %d residues, %d atoms, confidence: %.2f", 
+                             target_name, 
+                             structure_info["residue_count"],
+                             structure_info["atom_count"],
+                             structure_info["confidence_scores"]["overall"])
+            
+            return structure_info
+            
+        except Exception as e:
+            self.logger.error("Error predicting structure for %s: %s", target_name, e)
+            
+            # Learn from failure
+            self.learn_from_interaction({
+                "interaction_type": "structure_prediction",
+                "key": f"prediction:{target_name}",
+                "target_name": target_name,
+                "error_message": str(e),
+                "success": False
+            })
+            
+            return None
+    
+    def identify_binding_sites(
+        self,
+        target_name: str,
+        structure_info: Dict[str, Any],
+        sequence_info: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        """
+        Identify potential binding sites in the protein structure.
+        
+        Args:
+            target_name: Name of the target protein.
+            structure_info: Dictionary containing structure information.
+            sequence_info: Dictionary containing sequence information.
+            
+        Returns:
+            List of dictionaries describing binding sites.
+        """
+        try:
+            pdb_file = structure_info.get("pdb_file")
+            
+            if not pdb_file:
+                self.logger.warning("No PDB file found for %s", target_name)
+                return []
+                
+            # Extract known binding sites from sequence info
+            known_binding_sites = []
+            for site in sequence_info.get("binding_sites", []):
+                known_binding_sites.append({
+                    "name": site.get("name", "Unknown"),
+                    "residues": site.get("residues", []),
+                    "type": site.get("type", "Unknown"),
+                    "ligand": site.get("ligand", "Unknown")
+                })
+            
+            # Identify binding sites using our detector
+            detected_sites = self.binding_site_detector.detect(
+                pdb_file,
+                known_binding_sites=known_binding_sites
+            )
+            
+            # Process mutations if present
+            mutations = sequence_info.get("mutations", [])
+            if mutations:
+                # Add mutation sites as potential binding sites
+                for mutation in mutations:
+                    position = mutation.get("position")
+                    mutated = mutation.get("mutated_residue")
+                    original = mutation.get("original_residue")
+                    
+                    if position and mutated and original:
+                        # Check if this mutation is within an existing binding site
+                        in_binding_site = False
+                        for site in detected_sites:
+                            if position in site.get("residue_ids", []):
+                                in_binding_site = True
+                                break
+                        
+                        # If not in an existing site, add it as a new site
+                        if not in_binding_site:
+                            mutation_site = {
+                                "name": f"Mutation_{original}{position}{mutated}",
+                                "type": "mutation",
+                                "center": {"x": 0, "y": 0, "z": 0},  # Will be calculated by the detector
+                                "radius": 10.0,  # Default radius around mutation
+                                "residue_ids": [position],
+                                "score": 0.9,  # High score for known mutations
+                                "description": f"Mutation site {original}{position}{mutated}"
+                            }
+                            detected_sites.append(mutation_site)
+            
+            # Log detected sites
+            self.logger.info("Detected %d binding sites for %s", 
+                             len(detected_sites), target_name)
+            
+            return detected_sites
+            
+        except Exception as e:
+            self.logger.error("Error identifying binding sites for %s: %s", 
+                             target_name, e)
+            
+            # Learn from failure
+            self.learn_from_interaction({
+                "interaction_type": "binding_site_detection",
+                "key": f"binding_site:{target_name}",
+                "target_name": target_name,
+                "error_message": str(e),
+                "success": False
+            })
+            
+            return []
+    
+    def prepare_structure_for_docking(
+        self,
+        target_name: str,
+        structure_info: Dict[str, Any],
+        binding_sites: List[Dict[str, Any]]
+    ) -> Optional[str]:
+        """
+        Prepare the protein structure for docking.
+        
+        Args:
+            target_name: Name of the target protein.
+            structure_info: Dictionary containing structure information.
+            binding_sites: List of dictionaries describing binding sites.
+            
+        Returns:
+            Path to the prepared structure file or None if preparation failed.
+        """
+        try:
+            pdb_file = structure_info.get("pdb_file")
+            
+            if not pdb_file:
+                self.logger.warning("No PDB file found for %s", target_name)
+                return None
+                
+            # Get output directory
+            data_dir = self._get_data_dir()
+            output_dir = os.path.join(data_dir, "outputs", "docking", target_name)
+            os.makedirs(output_dir, exist_ok=True)
+            
+            # Prepare structure for each binding site
+            prepared_structures = []
+            
+            for i, site in enumerate(binding_sites):
+                site_name = site.get("name", f"site_{i+1}")
+                site_radius = site.get("radius", 10.0)
+                site_center = site.get("center", {"x": 0, "y": 0, "z": 0})
+                
+                # Prepare structure for this site
+                prepared_file = self.pdb_processor.prepare_for_docking(
+                    pdb_file,
+                    os.path.join(output_dir, f"{target_name}_{site_name}_prepared.pdb"),
+                    center=[site_center["x"], site_center["y"], site_center["z"]],
+                    radius=site_radius
+                )
+                
+                if prepared_file:
+                    prepared_structures.append({
+                        "site_name": site_name,
+                        "file_path": prepared_file,
+                        "center": site_center,
+                        "radius": site_radius
+                    })
+            
+            # Create master prepared structure file with all sites
+            master_prepared_file = os.path.join(output_dir, f"{target_name}_prepared.json")
+            
+            with open(master_prepared_file, "w") as f:
+                json.dump({
+                    "target_name": target_name,
+                    "original_pdb": pdb_file,
+                    "prepared_structures": prepared_structures
+                }, f, indent=2)
+                
+            # Log results
+            self.logger.info("Prepared %d structures for %s", 
+                             len(prepared_structures), target_name)
+            
+            return master_prepared_file
+            
+        except Exception as e:
+            self.logger.error("Error preparing structure for %s: %s", 
+                             target_name, e)
+            
+            # Learn from failure
+            self.learn_from_interaction({
+                "interaction_type": "structure_preparation",
+                "key": f"preparation:{target_name}",
+                "target_name": target_name,
+                "error_message": str(e),
+                "success": False
+            })
+            
+            return None
+    
+    def _get_data_dir() -> str:
+        """
+        Get the data directory path.
+        
+        Returns:
+            Path to the data directory.
+        """
+        data_dir = self.config.get("data_dir")
+        
+        if not data_dir:
+            # Try to determine the root directory
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            root_dir = os.path.dirname(os.path.dirname(current_dir))
+            data_dir = os.path.join(root_dir, "data")
+            
+        return data_dir
+
+    def predict_structure(
+        self,
+        target_name: str,
+        sequence_info: Dict[str, Any],
+        job_script_path: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Run AlphaFold to predict the structure of a protein.
+        
+        Args:
+            target_name: Name of the target protein.
+            sequence_info: Dictionary containing sequence information.
+            job_script_path: Path to the SLURM job script.
+            
+        Returns:
+            Dictionary containing structure information or None if prediction failed.
+        """
+        # Submit job to SLURM
+        try:
+            job_id = self.execute_with_retry(
+                self.slurm_client.submit_job,
+                job_script_path,
+                operation_name=f"Submit AlphaFold job for {target_name}"
+            )
+            
+            self.logger.info("Submitted AlphaFold job for %s (Job ID: %s)", 
+                             target_name, job_id)
+            
+            # Monitor job
+            job_status = self.slurm_client.monitor_job(job_id)
+            
+            if job_status != "COMPLETED":
+                self.logger.error("AlphaFold job for %s failed with status: %s", 
+                                 target_name, job_status)
+                return None
+                
+            # The AlphaFoldClient expects the base output directory, not the full timestamped path.
+            # It will then find the timestamped subdirectory itself.
+            data_dir = self._get_data_dir()
+            alphafold_base_output_dir = os.path.join(data_dir, "outputs", "structures", target_name)
+            
+            # Get PDB file
+            pdb_file = self.alphafold_client.get_best_model_path(alphafold_base_output_dir, target_name)
+            
+            if not pdb_file or not os.path.exists(pdb_file):
+                self.logger.error("No PDB file found for %s", target_name)
+                return None
+                
+            # Get confidence scores and multimer info directly from AlphaFold output
+            confidence_scores_af = self.alphafold_client.get_confidence_scores(alphafold_base_output_dir, target_name)
+            multimer_info_af = self.alphafold_client.get_multimer_info(alphafold_base_output_dir, target_name)
 
             # Process PDB file
             structure_data = self.pdb_processor.parse_pdb(pdb_file)

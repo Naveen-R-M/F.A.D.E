@@ -39,7 +39,7 @@
 - ✅ Write unit tests for StructurePredictor agent
 - ✅ Test StructurePredictor agent with example proteins
 
-## Step 3: Molecule Generator Agent (Next)
+## Step 3: Molecule Generator Agent (Completed)
 - ✅ Implement MoleculeGenerator agent
 - ✅ Integrate with RDKit
 - ✅ Implement molecule property calculators

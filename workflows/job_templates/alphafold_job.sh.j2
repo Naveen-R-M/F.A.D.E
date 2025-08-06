@@ -108,14 +108,57 @@ singularity exec --nv --cleanenv \
 echo "AlphaFold 3 prediction completed."
 
 # ── Copy the best-ranked model to a predictable filename ─────────────────
-BEST_MODEL=$(find "${OUTPUT_DIR}" -name "*rank_001*.pdb" | head -n1 \
-             || find "${OUTPUT_DIR}" -name "*model_0*.pdb" | head -n1)
-if [ -n "${BEST_MODEL}" ]; then
-  cp "${BEST_MODEL}" "${OUTPUT_DIR}/${PROTEIN_NAME}_best_model.pdb"
-  echo "Best model saved → ${OUTPUT_DIR}/${PROTEIN_NAME}_best_model.pdb"
+# AlphaFold3 outputs CIF files, not PDB files. Look for the main model.cif file
+# The structure is typically: OUTPUT_DIR/PROTEIN_af3_input/protein_name_lower/protein_name_lower_model.cif
+
+# Find the actual output directory (may have timestamp suffix)
+AF3_OUTPUT_BASE="${OUTPUT_DIR}/$(basename "${AF3_INPUT_JSON}" .json)"
+PROTEIN_LOWER=$(echo "${PROTEIN_NAME}" | tr '[:upper:]' '[:lower:]')
+
+# Look for the protein subdirectory (could be direct or timestamped)
+if [ -d "${AF3_OUTPUT_BASE}/${PROTEIN_LOWER}" ]; then
+    ACTUAL_OUTPUT_DIR="${AF3_OUTPUT_BASE}/${PROTEIN_LOWER}"
+elif [ -d "${AF3_OUTPUT_BASE}/${PROTEIN_LOWER}_"* ]; then
+    # Find the most recent timestamped directory
+    ACTUAL_OUTPUT_DIR=$(ls -dt "${AF3_OUTPUT_BASE}/${PROTEIN_LOWER}_"* | head -n1)
 else
-  echo "⚠️  No best model found; directory listing:"
-  ls -la "${OUTPUT_DIR}"
+    ACTUAL_OUTPUT_DIR="${AF3_OUTPUT_BASE}"
+fi
+
+echo "Looking for model in: ${ACTUAL_OUTPUT_DIR}"
+
+# Look for the main model CIF file
+BEST_MODEL="${ACTUAL_OUTPUT_DIR}/${PROTEIN_LOWER}_model.cif"
+
+if [ -f "${BEST_MODEL}" ]; then
+  cp "${BEST_MODEL}" "${OUTPUT_DIR}/${PROTEIN_NAME}_best_model.cif"
+  echo "✅ Best model saved → ${OUTPUT_DIR}/${PROTEIN_NAME}_best_model.cif"
+  
+  # Also check for confidence scores
+  SUMMARY_CONF="${ACTUAL_OUTPUT_DIR}/${PROTEIN_LOWER}_summary_confidences.json"
+  if [ -f "${SUMMARY_CONF}" ]; then
+    echo "📊 Confidence scores found:"
+    jq -r '.ranking_score // "N/A" | "   Ranking Score: \(.)"' "${SUMMARY_CONF}"
+    jq -r '.ptm // "N/A" | "   PTM Score: \(.)"' "${SUMMARY_CONF}"
+  fi
+else
+  # Fallback: look for any CIF file in the output directory
+  echo "⚠️  Main model not found at expected location, searching for any CIF files..."
+  CIF_FILES=$(find "${AF3_OUTPUT_BASE}" -name "*.cif" -type f 2>/dev/null | grep -v "TERMS_OF_USE")
+  
+  if [ -n "${CIF_FILES}" ]; then
+    FIRST_CIF=$(echo "${CIF_FILES}" | head -n1)
+    cp "${FIRST_CIF}" "${OUTPUT_DIR}/${PROTEIN_NAME}_best_model.cif"
+    echo "✅ Found and copied CIF file: ${FIRST_CIF}"
+    echo "   → Saved as: ${OUTPUT_DIR}/${PROTEIN_NAME}_best_model.cif"
+  else
+    echo "❌ No CIF model files found. Directory contents:"
+    ls -la "${AF3_OUTPUT_BASE}/"
+    if [ -d "${ACTUAL_OUTPUT_DIR}" ] && [ "${ACTUAL_OUTPUT_DIR}" != "${AF3_OUTPUT_BASE}" ]; then
+      echo "Subdirectory contents:"
+      ls -la "${ACTUAL_OUTPUT_DIR}/"
+    fi
+  fi
 fi
 
 echo "Job finished for ${PROTEIN_NAME}"

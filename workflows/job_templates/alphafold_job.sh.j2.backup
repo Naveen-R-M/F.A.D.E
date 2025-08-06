@@ -1,14 +1,18 @@
 #!/bin/bash
-#SBATCH --job-name=af3_KRAS
-#SBATCH --output=/scratch/rajagopalmohanraj.n/F.A.D.E/logs/%x_%j.out
-#SBATCH --error=/scratch/rajagopalmohanraj.n/F.A.D.E/logs/%x_%j.err
-#SBATCH --partition=gpu-short
+#SBATCH --job-name=af3_{{ protein_name }}
+#SBATCH --output={{ logs_dir }}/%x_%j.out
+#SBATCH --error={{ logs_dir }}/%x_%j.err
+#SBATCH --partition={{ partition }}
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
+#SBATCH --cpus-per-task={{ cpus }}
 #SBATCH --gres=gpu:h200:1
-#SBATCH --mem=128G
+#SBATCH --mem={{ memory }}
 #SBATCH --time=02:00:00
+{% if email %}
+#SBATCH --mail-user={{ email }}
+#SBATCH --mail-type=ALL
+{% endif %}
 
 set -euo pipefail
 
@@ -26,8 +30,8 @@ export SINGULARITYENV_XLA_FLAGS="--xla_disable_hlo_passes=custom-kernel-fusion-r
 export APPTAINERENV_XLA_FLAGS="--xla_disable_hlo_passes=custom-kernel-fusion-rewriter"
 
 # ── Configuration file supplied by the user ──────────────────────────────
-CONFIG_FILE="/scratch/rajagopalmohanraj.n/F.A.D.E/agents/data/inputs/configs/KRAS_alphafold.json"
-PROTEIN_NAME="KRAS"
+CONFIG_FILE="{{ config_file }}"
+PROTEIN_NAME="{{ protein_name }}"
 
 echo "Starting AlphaFold 3 for ${PROTEIN_NAME}"
 echo "  Config: ${CONFIG_FILE}"
@@ -104,57 +108,15 @@ singularity exec --nv --cleanenv \
 echo "AlphaFold 3 prediction completed."
 
 # ── Copy the best-ranked model to a predictable filename ─────────────────
-# AlphaFold3 outputs CIF files, not PDB files. Look for the main model.cif file
-# The structure is typically: OUTPUT_DIR/PROTEIN_af3_input/protein_name_lower/protein_name_lower_model.cif
-
-# Find the actual output directory (may have timestamp suffix)
-AF3_OUTPUT_BASE="${OUTPUT_DIR}/$(basename "${AF3_INPUT_JSON}" .json)"
-PROTEIN_LOWER=$(echo "${PROTEIN_NAME}" | tr '[:upper:]' '[:lower:]')
-
-# Look for the protein subdirectory (could be direct or timestamped)
-if [ -d "${AF3_OUTPUT_BASE}/${PROTEIN_LOWER}" ]; then
-    ACTUAL_OUTPUT_DIR="${AF3_OUTPUT_BASE}/${PROTEIN_LOWER}"
-elif [ -d "${AF3_OUTPUT_BASE}/${PROTEIN_LOWER}_"* ]; then
-    # Find the most recent timestamped directory
-    ACTUAL_OUTPUT_DIR=$(ls -dt "${AF3_OUTPUT_BASE}/${PROTEIN_LOWER}_"* | head -n1)
+BEST_MODEL=$(find "${OUTPUT_DIR}" -name "*rank_001*.pdb" | head -n1 \
+             || find "${OUTPUT_DIR}" -name "*model_0*.pdb" | head -n1)
+if [ -n "${BEST_MODEL}" ]; then
+  cp "${BEST_MODEL}" "${OUTPUT_DIR}/${PROTEIN_NAME}_best_model.pdb"
+  echo "Best model saved → ${OUTPUT_DIR}/${PROTEIN_NAME}_best_model.pdb"
 else
-    ACTUAL_OUTPUT_DIR="${AF3_OUTPUT_BASE}"
-fi
-
-echo "Looking for model in: ${ACTUAL_OUTPUT_DIR}"
-
-# Look for the main model CIF file
-BEST_MODEL="${ACTUAL_OUTPUT_DIR}/${PROTEIN_LOWER}_model.cif"
-
-if [ -f "${BEST_MODEL}" ]; then
-  cp "${BEST_MODEL}" "${OUTPUT_DIR}/${PROTEIN_NAME}_best_model.cif"
-  echo "✅ Best model saved → ${OUTPUT_DIR}/${PROTEIN_NAME}_best_model.cif"
-  
-  # Also check for confidence scores
-  SUMMARY_CONF="${ACTUAL_OUTPUT_DIR}/${PROTEIN_LOWER}_summary_confidences.json"
-  if [ -f "${SUMMARY_CONF}" ]; then
-    echo "📊 Confidence scores found:"
-    jq -r '.ranking_score // "N/A" | "   Ranking Score: \(.)"' "${SUMMARY_CONF}"
-    jq -r '.ptm // "N/A" | "   PTM Score: \(.)"' "${SUMMARY_CONF}"
-  fi
-else
-  # Fallback: look for any CIF file in the output directory
-  echo "⚠️  Main model not found at expected location, searching for any CIF files..."
-  CIF_FILES=$(find "${AF3_OUTPUT_BASE}" -name "*.cif" -type f 2>/dev/null | grep -v "TERMS_OF_USE")
-  
-  if [ -n "${CIF_FILES}" ]; then
-    FIRST_CIF=$(echo "${CIF_FILES}" | head -n1)
-    cp "${FIRST_CIF}" "${OUTPUT_DIR}/${PROTEIN_NAME}_best_model.cif"
-    echo "✅ Found and copied CIF file: ${FIRST_CIF}"
-    echo "   → Saved as: ${OUTPUT_DIR}/${PROTEIN_NAME}_best_model.cif"
-  else
-    echo "❌ No CIF model files found. Directory contents:"
-    ls -la "${AF3_OUTPUT_BASE}/"
-    if [ -d "${ACTUAL_OUTPUT_DIR}" ] && [ "${ACTUAL_OUTPUT_DIR}" != "${AF3_OUTPUT_BASE}" ]; then
-      echo "Subdirectory contents:"
-      ls -la "${ACTUAL_OUTPUT_DIR}/"
-    fi
-  fi
+  echo "⚠️  No best model found; directory listing:"
+  ls -la "${OUTPUT_DIR}"
 fi
 
 echo "Job finished for ${PROTEIN_NAME}"
+

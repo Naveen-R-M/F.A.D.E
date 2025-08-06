@@ -197,3 +197,48 @@ If you use F.A.D.E in your research, please cite:
 
 - This project was developed on the Northeastern University HPC cluster
 - Special thanks to the contributors of AlphaFold, RDKit, and Schrodinger
+
+## Maintenance and Cleanup
+
+### Managing Disk Space
+
+The F.A.D.E pipeline generates significant amounts of data during operation, including AlphaFold structure predictions, docking results, and logs. Several utility scripts are provided to manage disk space:
+
+#### Check Disk Usage
+
+Monitor disk usage across all project directories:
+
+```bash
+python check_disk_usage.py           # Basic usage summary
+python check_disk_usage.py --detailed  # Detailed breakdown with subdirectories
+```
+
+#### Clear Logs
+
+Remove log files from the project:
+
+```bash
+python clear_logs.py              # Delete all log files
+python clear_logs.py --days 7     # Delete logs older than 7 days
+```
+
+#### Clear Outputs
+
+Remove output files (structures, docking results, etc.):
+
+```bash
+python clear_outputs.py                    # Delete all outputs (with confirmation)
+python clear_outputs.py --keep-best        # Delete outputs but keep best models
+python clear_outputs.py --days 30          # Delete outputs older than 30 days
+python clear_outputs.py --dry-run          # Preview what would be deleted
+python clear_outputs.py --confirm          # Skip confirmation prompt
+```
+
+**Warning**: The `clear_outputs.py` script will permanently delete:
+- AlphaFold structure predictions
+- Docking results
+- Generated molecules
+- Test results
+
+Always use `--dry-run` first to preview what will be deleted, and consider using `--keep-best` to preserve the best models from each run.
+

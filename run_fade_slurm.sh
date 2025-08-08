@@ -6,7 +6,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=16G
-#SBATCH --partition=shared
+#SBATCH --partition=gpu-short
 
 # Load required modules
 module load miniconda3/24.11.1

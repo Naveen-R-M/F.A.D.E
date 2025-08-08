@@ -1,0 +1,265 @@
+/*
+ * F.A.D.E Nextflow Configuration
+ * Defines execution profiles, resource allocation, and container settings
+ */
+
+// Manifest
+manifest {
+    name = 'F.A.D.E'
+    author = 'F.A.D.E Development Team'
+    description = 'Fully Agentic Drug Engine - AI-driven drug discovery pipeline'
+    version = '1.0.0'
+    nextflowVersion = '>=23.04.0'
+}
+
+// Default parameters
+params {
+    // Input/Output
+    query = null
+    output_dir = "results_${new Date().format('yyyyMMdd_HHmmss')}"
+    
+    // Pipeline control
+    max_molecules = 1000
+    max_iterations = 3
+    min_docking_score = -7.0
+    
+    // Resource limits
+    max_cpus = 16
+    max_memory = '128.GB'
+    max_time = '240.h'
+    
+    // Container/Environment settings
+    use_singularity = true
+    singularity_cache = "$SCRATCH/singularity_cache"
+    conda_cache = "$SCRATCH/conda_cache"
+    
+    // API Keys (loaded from environment)
+    gemini_api_key = ""
+    
+    // Module paths
+    alphafold_container = "/shared/containers/alphafold3.sif"
+    schrodinger_path = "/opt/schrodinger2024-4"
+    
+    // Help
+    help = false
+}
+
+// Profiles for different execution environments
+profiles {
+    
+    // Northeastern University HPC (Discovery Cluster)
+    northeastern {
+        process {
+            executor = 'slurm'
+            queue = 'shared'
+            
+            // Default resources
+            cpus = 4
+            memory = '16.GB'
+            time = '24.h'
+            
+            // Process-specific settings
+            withLabel: 'process_single' {
+                cpus = 1
+                memory = '4.GB'
+            }
+            
+            withLabel: 'process_low' {
+                cpus = 2
+                memory = '8.GB'
+            }
+            
+            withLabel: 'process_medium' {
+                cpus = 4
+                memory = '16.GB'
+            }
+            
+            withLabel: 'process_high' {
+                cpus = 8
+                memory = '32.GB'
+            }
+            
+            withLabel: 'process_gpu' {
+                queue = 'gpu'
+                clusterOptions = '--gres=gpu:v100:1'
+                cpus = 8
+                memory = '32.GB'
+                time = '48.h'
+            }
+            
+            withLabel: 'alphafold' {
+                queue = 'gpu'
+                clusterOptions = '--gres=gpu:a100:1'
+                cpus = 16
+                memory = '64.GB'
+                time = '72.h'
+                container = params.alphafold_container
+            }
+            
+            withLabel: 'docking' {
+                queue = 'shared'
+                cpus = 4
+                memory = '16.GB'
+                time = '12.h'
+            }
+            
+            withLabel: 'highmem' {
+                queue = 'highmem'
+                cpus = 16
+                memory = '128.GB'
+                time = '48.h'
+            }
+        }
+        
+        // Singularity settings
+        singularity {
+            enabled = true
+            autoMounts = true
+            cacheDir = params.singularity_cache
+            runOptions = '--nv'  // Enable GPU support
+        }
+        
+        // Environment modules
+        process {
+            beforeScript = 'module load gcc/11.3.0'
+        }
+    }
+    
+    // Local execution (for testing)
+    local {
+        process {
+            executor = 'local'
+            cpus = 2
+            memory = '8.GB'
+        }
+        
+        docker {
+            enabled = true
+            runOptions = '-v $HOME:$HOME'
+        }
+    }
+    
+    // AWS Batch execution
+    aws {
+        process {
+            executor = 'awsbatch'
+            queue = 'fade-queue'
+            
+            withLabel: 'process_gpu' {
+                accelerator = 1
+                containerOptions = '--gpus all'
+            }
+        }
+        
+        aws {
+            region = 'us-east-1'
+            batch.cliPath = '/usr/local/bin/aws'
+        }
+    }
+    
+    // Google Cloud Platform
+    gcp {
+        process {
+            executor = 'google-batch'
+            
+            withLabel: 'process_gpu' {
+                machineType = 'n1-standard-8'
+                accelerator = [type: 'nvidia-tesla-v100', count: 1]
+            }
+        }
+        
+        google {
+            project = 'fade-project'
+            region = 'us-central1'
+        }
+    }
+    
+    // Development profile (verbose logging)
+    dev {
+        process.executor = 'local'
+        trace.enabled = true
+        trace.file = 'pipeline_trace.txt'
+        timeline.enabled = true
+        timeline.file = 'timeline.html'
+        report.enabled = true
+        report.file = 'report.html'
+        dag.enabled = true
+        dag.file = 'pipeline_dag.pdf'
+    }
+}
+
+// Process settings
+process {
+    // Error handling
+    errorStrategy = { task.exitStatus in [143,137,104,134,139] ? 'retry' : 'finish' }
+    maxRetries = 3
+    maxErrors = '-1'
+    
+    // Shell settings
+    shell = ['/bin/bash', '-euo', 'pipefail']
+    
+    // Container settings
+    containerOptions = {
+        workflow.containerEngine == "singularity" ? 
+            '--cleanenv --no-home' : 
+            ''
+    }
+}
+
+// Execution settings
+executor {
+    name = 'slurm'
+    queueSize = 100
+    submitRateLimit = '10 sec'
+    pollInterval = '30 sec'
+    queueStatInterval = '5 min'
+    exitReadTimeout = '120 sec'
+}
+
+// Capture exit codes for debugging
+trace {
+    enabled = false
+    file = 'pipeline_trace.txt'
+    fields = 'task_id,hash,native_id,name,status,exit,submit,start,complete,duration,realtime,%cpu,peak_rss,peak_vmem,rchar,wchar'
+}
+
+// Timeline report
+timeline {
+    enabled = false
+    file = 'timeline.html'
+}
+
+// Execution report
+report {
+    enabled = false
+    file = 'report.html'
+}
+
+// DAG visualization
+dag {
+    enabled = false
+    file = 'pipeline_dag.pdf'
+}
+
+// Cleanup settings
+cleanup = true
+
+// Function to check required parameters
+def checkParams() {
+    if (!params.query && !params.batch_file) {
+        log.error "Either --query or --batch_file must be provided"
+        System.exit(1)
+    }
+    
+    if (!params.gemini_api_key) {
+        log.warn "GEMINI_API_KEY not set. Some features may not work."
+    }
+}
+
+// Validate parameters on startup
+checkParams()
+
+// Missing parameters
+params.use_alphafold = true
+params.run_fep = false
+params.gemini_api_key = ''

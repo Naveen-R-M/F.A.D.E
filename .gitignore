@@ -72,11 +72,11 @@ current_test/
 summary_test/
 test_results/
 results/summary.log
-results/results.json
+results/json
 
 # Agent memory files (contain runtime learning data)
 agents/data/memory/*.json
-!agents/data/memory/.gitkeep
+!agents/aents/data/memory/.gitkeep
 data/memory/molecule_generator_memory.json
 
 # Generated utility scripts
@@ -99,4 +99,27 @@ agents/data/inputs/sequences/*
 # OS specific files
 .DS_Store
 Thumbs.db
-\n# Ignore contents of data input directories\ndata/inputs/job_scripts/*\ndata/inputs/configs/*\ndata/inputs/sequences/*\n
+
+# Ignore contents of data input directories
+data/inputs/job_scripts/*
+data/inputs/configs/*
+data/inputs/sequences/*
+
+# Ignore all data output directories
+**/data/outputs/
+
+# Nextflow execution files
+nextflow/work/
+nextflow/.nextflow/
+nextflow/.nextflow.log*
+nextflow/results_*/
+
+# Nextflow reports
+nextflow/report.html
+nextflow/timeline.html
+nextflow/trace.txt
+nextflow/dag.*
+
+# Nextflow Tower (if used)
+nextflow/.tower/
+nextflow/tower.yml

@@ -1,96 +1,86 @@
 /*
  * Molecular Docking Module
- * Performs virtual screening
+ * Performs high-throughput virtual screening using AutoDock Vina or Schrodinger Glide
  */
 
-process prepareLigands {
-    tag "ligand_prep"
-    label 'process_medium'
-    publishDir "${params.output_dir}/05_docking/prepared", mode: 'copy'
+process molecularDocking {
+    tag "${molecules.baseName}"
+    label 'process_high'
+    publishDir "${params.output_dir}/05_docking", mode: 'copy'
+    
+    conda "${params.fade_env_path}"
+    
+    cpus 8
+    memory '16.GB'
+    time '4.h'
     
     input:
     path molecules
-    
-    output:
-    path "ligands_prepared.pdbqt", emit: ligands
-    
-    script:
-    """
-    # Create dummy prepared ligands
-    echo "REMARK Prepared ligands" > ligands_prepared.pdbqt
-    echo "ATOM      1  C   LIG A   1       0.000   0.000   0.000" >> ligands_prepared.pdbqt
-    """
-    
-    stub:
-    """
-    touch ligands_prepared.pdbqt
-    """
-}
-
-process runDocking {
-    tag "docking"
-    label 'docking'
-    publishDir "${params.output_dir}/05_docking/results", mode: 'copy'
-    
-    input:
-    path receptor
-    path ligands
+    path prepared_receptor
     path binding_sites
     
     output:
-    path "docking_results.csv", emit: results
+    path 'docking_results.json', emit: all_results
+    path 'top_hits.json', emit: top_hits
+    path 'docking_stats.json', emit: stats
     
     script:
+    def method = params.docking_method ?: "vina"
+    def max_poses = params.max_poses ?: 10
     """
-    # Create dummy docking results
-    echo "ligand,docking_score" > docking_results.csv
-    echo "molecule_1,-7.8" >> docking_results.csv
-    echo "molecule_2,-6.5" >> docking_results.csv
+    # Set up environment
+    export PYTHONPATH="${projectDir}:\$PYTHONPATH"
+    
+    # Load docking software modules
+    if [ "${method}" = "glide" ]; then
+        module load schrodinger/2024-4 || echo "Schrodinger not available, falling back to Vina"
+        method="vina"
+    fi
+    
+    module load AutoDock-Vina/1.2.3 || echo "AutoDock Vina module not available"
+    
+    # Run docking
+    run_docking.py \\
+        --molecules ${molecules} \\
+        --receptor ${prepared_receptor} \\
+        --binding-sites ${binding_sites} \\
+        --output-dir . \\
+        --method ${method} \\
+        --max-poses ${max_poses}
+    
+    # Verify outputs exist
+    if [ ! -f "docking_results.json" ]; then
+        echo '{"error": "Docking failed", "results": []}' > docking_results.json
+    fi
+    
+    if [ ! -f "top_hits.json" ]; then
+        echo '{"error": "No top hits identified", "hits": []}' > top_hits.json
+    fi
+    
+    if [ ! -f "docking_stats.json" ]; then
+        echo '{"total_molecules": 0, "successful_docking": 0}' > docking_stats.json
+    fi
     """
     
     stub:
     """
-    echo "ligand,score" > docking_results.csv
-    """
-}
-
-process aggregateDockingResults {
-    tag "aggregation"
-    label 'process_low'
-    publishDir "${params.output_dir}/05_docking", mode: 'copy'
-    
-    input:
-    path results
-    
-    output:
-    path "all_docking_results.csv", emit: all_results
-    path "top_hits.csv", emit: top_hits
-    
-    script:
-    """
-    cp ${results} all_docking_results.csv
-    head -n 2 all_docking_results.csv > top_hits.csv
-    """
-    
-    stub:
-    """
-    echo "ligand,score" > all_docking_results.csv
-    echo "ligand,score" > top_hits.csv
+    echo '[{"molecule_id": "MOL_001", "docking_score": -8.5, "smiles": "CCO"}]' > docking_results.json
+    echo '[{"molecule_id": "MOL_001", "docking_score": -8.5, "smiles": "CCO"}]' > top_hits.json
+    echo '{"total_molecules": 1, "successful_docking": 1, "top_hits_count": 1}' > docking_stats.json
     """
 }
 
 workflow DOCKING {
     take:
     molecules
-    receptor
+    prepared_receptor
     binding_sites
     
     main:
-    prepareLigands(molecules)
-    runDocking(receptor, prepareLigands.out.ligands, binding_sites)
-    aggregateDockingResults(runDocking.out.results)
+    molecularDocking(molecules, prepared_receptor, binding_sites)
     
     emit:
-    all_results = aggregateDockingResults.out.all_results
-    top_hits = aggregateDockingResults.out.top_hits
+    all_results = molecularDocking.out.all_results
+    top_hits = molecularDocking.out.top_hits
+    stats = molecularDocking.out.stats
 }

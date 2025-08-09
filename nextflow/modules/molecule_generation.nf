@@ -1,73 +1,75 @@
 /*
  * Molecule Generation Module
- * Generates drug-like molecules using LLM and validates them
+ * Uses MoleculeGenerator agent to create potential drug candidates
  */
 
-process generateMoleculesBatch {
-    tag "batch_${batch_id}"
-    label 'process_medium'
-    publishDir "${params.output_dir}/04_molecules", mode: 'copy'
+process moleculeGeneration {
+    tag "iteration_${iteration}"
+    label 'process_high'
+    publishDir "${params.output_dir}/04_molecule_generation", mode: 'copy'
+    
+    conda "${params.fade_env_path}"
+    
+    cpus 4
+    memory '16.GB'
+    time '2.h'
     
     input:
-    val batch_id
     path requirements
     path binding_sites
+    path target_info
     val iteration
     
     output:
-    path "molecules_*.sdf", emit: molecules
-    path "generation_log.json", emit: log
+    path 'molecules.sdf', emit: molecules
+    path 'molecules.json', emit: molecules_json
+    path 'generation_stats.json', emit: stats
     
     script:
+    def api_key = params.gemini_api_key ?: System.getenv('GEMINI_API_KEY') ?: ""
+    def model = params.gemini_model ?: "models/gemini-2.5-flash"
+    def max_molecules = params.max_molecules ?: 100
     """
-    # Create dummy molecules for testing
-    cat > molecules_batch_${batch_id}.sdf << 'SDFEOF'
-molecule_1
-  ChemDraw
-
-  3  2  0  0  0  0  0  0  0  0999 V2000
-    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
-    1.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
-    2.0000    0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0
-  1  2  1  0  0  0  0
-  2  3  1  0  0  0  0
-M  END
-\$\$\$\$
-SDFEOF
+    # Set up environment
+    export PYTHONPATH="${projectDir}:\$PYTHONPATH"
+    export GEMINI_API_KEY="${api_key}"
     
-    echo '{"batch_id": ${batch_id}, "molecules_generated": 1}' > generation_log.json
+    # Load RDKit module if available
+    module load RDKit/2023.09.5 || echo "RDKit module not available, using conda environment"
+    
+    # Run molecule generation
+    run_molecule_generator.py \\
+        --requirements ${requirements} \\
+        --binding-sites ${binding_sites} \\
+        --target-info ${target_info} \\
+        --output-dir . \\
+        --api-key "${api_key}" \\
+        --model "${model}" \\
+        --max-molecules ${max_molecules} \\
+        --iteration ${iteration}
+    
+    # Verify outputs exist
+    if [ ! -f "molecules.sdf" ]; then
+        echo "# Molecule generation failed" > molecules.sdf
+    fi
+    
+    if [ ! -f "molecules.json" ]; then
+        echo '{"error": "Molecule generation failed", "molecules": []}' > molecules.json
+    fi
+    
+    if [ ! -f "generation_stats.json" ]; then
+        echo '{"total_generated": 0, "valid_molecules": 0}' > generation_stats.json
+    fi
     """
     
     stub:
     """
-    touch molecules_batch_${batch_id}.sdf
-    echo '{"batch_id": ${batch_id}}' > generation_log.json
-    """
-}
-
-process validateMolecules {
-    tag "validation"
-    label 'process_low'
-    publishDir "${params.output_dir}/04_molecules/validated", mode: 'copy'
-    
-    input:
-    path molecules
-    
-    output:
-    path "validated_molecules.sdf", emit: validated
-    path "validation_report.json", emit: report
-    
-    script:
-    """
-    # For testing, just copy the input
-    cat ${molecules} > validated_molecules.sdf
-    echo '{"validated": 1, "rejected": 0}' > validation_report.json
-    """
-    
-    stub:
-    """
-    touch validated_molecules.sdf
-    echo '{"validated": 0}' > validation_report.json
+    echo "MOL_001" > molecules.sdf
+    echo "  F.A.D.E Generated" >> molecules.sdf
+    echo "  SMILES: CCO" >> molecules.sdf
+    echo '\$\$\$\$' >> molecules.sdf
+    echo '[{"id": "MOL_001", "smiles": "CCO"}]' > molecules.json
+    echo '{"total_generated": 1, "valid_molecules": 1}' > generation_stats.json
     """
 }
 
@@ -75,22 +77,14 @@ workflow MOLECULE_GENERATION {
     take:
     requirements
     binding_sites
+    target_info
     iteration
     
     main:
-    // Generate a single batch for simplicity
-    batch_ch = Channel.value(1)
-    
-    generateMoleculesBatch(
-        batch_ch,
-        requirements,
-        binding_sites,
-        iteration
-    )
-    
-    validateMolecules(generateMoleculesBatch.out.molecules)
+    moleculeGeneration(requirements, binding_sites, target_info, iteration)
     
     emit:
-    molecules = validateMolecules.out.validated
-    report = validateMolecules.out.report
+    molecules = moleculeGeneration.out.molecules
+    molecules_json = moleculeGeneration.out.molecules_json
+    stats = moleculeGeneration.out.stats
 }

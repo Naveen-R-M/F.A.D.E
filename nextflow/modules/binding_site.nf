@@ -1,74 +1,64 @@
 /*
  * Binding Site Analysis Module
- * Identifies and characterizes protein binding sites
+ * Identifies and analyzes potential binding sites in protein structures
  */
 
-process detectCavities {
-    tag "$structure"
+process bindingSiteAnalysis {
+    tag "${structure.baseName}"
     label 'process_medium'
-    publishDir "${params.output_dir}/03_binding_sites", mode: 'copy'
+    publishDir "${params.output_dir}/03_binding_site_analysis", mode: 'copy'
+    
+    conda "${params.fade_env_path}"
     
     input:
     path structure
-    
-    output:
-    path "cavities.csv", emit: cavities
-    path "cavity_analysis.json", emit: analysis
-    
-    script:
-    """
-    # Create dummy cavity data for testing
-    echo "rank,score,probability,volume" > cavities.csv
-    echo "1,0.95,0.92,450.5" >> cavities.csv
-    echo "2,0.82,0.78,320.3" >> cavities.csv
-    
-    echo '{"total_cavities": 2, "top_cavity": {"rank": 1, "score": 0.95}}' > cavity_analysis.json
-    """
-    
-    stub:
-    """
-    echo "rank,score" > cavities.csv
-    echo '{"total_cavities": 1}' > cavity_analysis.json
-    """
-}
-
-process characterizeBindingSite {
-    tag "$structure"
-    label 'process_medium'
-    publishDir "${params.output_dir}/03_binding_sites", mode: 'copy'
-    
-    input:
-    path structure
-    path cavities
     path target_info
     
     output:
-    path "binding_sites.json", emit: binding_sites
-    path "site_properties.csv", emit: properties
+    path 'binding_sites.json', emit: binding_sites
+    path 'site_analysis.json', emit: analysis
     
     script:
+    def api_key = params.gemini_api_key ?: System.getenv('GEMINI_API_KEY') ?: ""
+    def model = params.gemini_model ?: "models/gemini-2.5-flash"
     """
-    # Create dummy binding site data
-    cat > binding_sites.json << 'JSONEOF'
-    {
-        "primary_site": {
-            "site_id": 1,
-            "score": 0.95,
-            "volume": 450.5,
-            "druggability_score": 0.88
-        },
-        "total_sites": 2
-    }
-    JSONEOF
+    # Set up environment
+    export PYTHONPATH="${projectDir}:\$PYTHONPATH"
+    export GEMINI_API_KEY="${api_key}"
     
-    echo "site_id,score,volume,druggability" > site_properties.csv
-    echo "1,0.95,450.5,0.88" >> site_properties.csv
+    # Run binding site analysis
+    run_binding_site_analysis.py \\
+        --structure ${structure} \\
+        --target-info ${target_info} \\
+        --output-dir . \\
+        --api-key "${api_key}" \\
+        --model "${model}"
+    
+    # Create site analysis summary
+    if [ -f "binding_sites.json" ]; then
+        python3 -c "
+import json
+with open('binding_sites.json', 'r') as f:
+    sites = json.load(f)
+    
+analysis = {
+    'num_sites': len(sites.get('sites', [])),
+    'method': sites.get('method', 'unknown'),
+    'confidence': 'high' if len(sites.get('sites', [])) > 0 else 'low'
+}
+
+with open('site_analysis.json', 'w') as f:
+    json.dump(analysis, f, indent=2)
+"
+    else
+        echo '{"error": "Binding site analysis failed"}' > site_analysis.json
+    fi
     """
     
     stub:
     """
-    echo '{"primary_site": {"site_id": 1}}' > binding_sites.json
-    echo "site_id,score" > site_properties.csv
+    echo '{"sites": [{"site_id": "site_1", "center": [0,0,0], "radius": 10.0}]}' > binding_sites.json
+    echo '{"num_sites": 1, "confidence": "medium"}' > site_analysis.json
     """
 }
 
@@ -78,14 +68,9 @@ workflow BINDING_SITE_ANALYSIS {
     target_info
     
     main:
-    detectCavities(structure)
-    characterizeBindingSite(
-        structure,
-        detectCavities.out.cavities,
-        target_info
-    )
+    bindingSiteAnalysis(structure, target_info)
     
     emit:
-    binding_sites = characterizeBindingSite.out.binding_sites
-    cavity_analysis = detectCavities.out.analysis
+    binding_sites = bindingSiteAnalysis.out.binding_sites
+    analysis = bindingSiteAnalysis.out.analysis
 }

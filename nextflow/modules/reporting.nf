@@ -1,99 +1,66 @@
 /*
  * Reporting Module
- * Generates comprehensive pipeline reports
+ * Generates comprehensive final reports from all pipeline results
  */
 
-process generateReport {
+process finalReporting {
     tag "final_report"
     label 'process_low'
-    publishDir "${params.output_dir}/07_report", mode: 'copy'
+    publishDir "${params.output_dir}/07_final_report", mode: 'copy'
     
-    container 'python:3.9'
+    conda "${params.fade_env_path}"
     
     input:
     path target_info
-    path structure  
+    path structure
     path docking_results
     path optimized_leads
     
     output:
-    path "final_report.html", emit: html_report
-    path "final_report.json", emit: json_report
-    path "summary.txt", emit: summary
+    path 'final_report.json', emit: report
+    path 'analysis_summary.md', emit: summary
+    path 'top_candidates.sdf', emit: top_candidates
     
     script:
+    def api_key = params.gemini_api_key ?: System.getenv('GEMINI_API_KEY') ?: ""
+    def model = params.gemini_model ?: "models/gemini-2.5-flash"
     """
-    # Get current date
-    CURRENT_DATE=\$(date)
-    CURRENT_ISO=\$(date -Iseconds)
+    # Set up environment
+    export PYTHONPATH="${projectDir}:\$PYTHONPATH"
+    export GEMINI_API_KEY="${api_key}"
     
-    # Create simple HTML report
-    cat > final_report.html << HTMLEOF
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>F.A.D.E Pipeline Report</title>
-        <style>
-            body { font-family: Arial, sans-serif; margin: 40px; }
-            h1 { color: #2c3e50; }
-            .info { background: #f0f0f0; padding: 10px; margin: 10px 0; }
-        </style>
-    </head>
-    <body>
-        <h1>F.A.D.E Drug Discovery Pipeline Report</h1>
-        <div class="info">
-            <h2>Query</h2>
-            <p>${params.query}</p>
-        </div>
-        <div class="info">
-            <h2>Results</h2>
-            <p>Pipeline completed successfully</p>
-            <p>Date: \$CURRENT_DATE</p>
-            <p>Target information: ${target_info}</p>
-            <p>Docking results: ${docking_results}</p>
-        </div>
-    </body>
-    </html>
-    HTMLEOF
+    # Run final reporting
+    run_reporting.py \\
+        --target-info ${target_info} \\
+        --structure ${structure} \\
+        --docking-results ${docking_results} \\
+        --optimized-leads ${optimized_leads} \\
+        --output-dir . \\
+        --api-key "${api_key}" \\
+        --model "${model}"
     
-    # Create JSON report
-    cat > final_report.json << JSONEOF
-    {
-        "status": "success",
-        "query": "${params.query}",
-        "date": "\$CURRENT_ISO",
-        "files": {
-            "target_info": "${target_info}",
-            "structure": "${structure}",
-            "docking_results": "${docking_results}",
-            "optimized_leads": "${optimized_leads}"
-        }
-    }
-    JSONEOF
+    # Verify outputs exist
+    if [ ! -f "final_report.json" ]; then
+        echo '{"error": "Report generation failed", "status": "failed"}' > final_report.json
+    fi
     
-    # Create text summary
-    cat > summary.txt << SUMMARYEOF
-    F.A.D.E Pipeline Summary
-    ========================
-    Query: ${params.query}
-    Date: \$CURRENT_DATE
-    Status: Complete
+    if [ ! -f "analysis_summary.md" ]; then
+        echo "# F.A.D.E Report Generation Failed" > analysis_summary.md
+        echo "An error occurred during report generation." >> analysis_summary.md
+    fi
     
-    Input Files:
-    - Target: ${target_info}
-    - Structure: ${structure}
-    - Docking: ${docking_results}
-    - Leads: ${optimized_leads}
-    
-    Pipeline completed successfully!
-    SUMMARYEOF
+    if [ ! -f "top_candidates.sdf" ]; then
+        echo "# No candidates available" > top_candidates.sdf
+    fi
     """
     
     stub:
     """
-    echo "<html><body><h1>F.A.D.E Report</h1></body></html>" > final_report.html
-    echo '{"status": "success"}' > final_report.json
-    echo "F.A.D.E Pipeline Summary" > summary.txt
+    echo '{"status": "success", "top_candidates": 1}' > final_report.json
+    echo "# F.A.D.E Drug Discovery Report" > analysis_summary.md
+    echo "## Summary: 1 candidate identified" >> analysis_summary.md
+    echo "MOL_001" > top_candidates.sdf
+    echo "\\$\\$\\$\\$" >> top_candidates.sdf
     """
 }
 
@@ -105,15 +72,10 @@ workflow REPORTING {
     optimized_leads
     
     main:
-    generateReport(
-        target_info,
-        structure,
-        docking_results,
-        optimized_leads
-    )
+    finalReporting(target_info, structure, docking_results, optimized_leads)
     
     emit:
-    html_report = generateReport.out.html_report
-    json_report = generateReport.out.json_report
-    summary = generateReport.out.summary
+    report = finalReporting.out.report
+    summary = finalReporting.out.summary
+    top_candidates = finalReporting.out.top_candidates
 }

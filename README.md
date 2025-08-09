@@ -242,3 +242,65 @@ python clear_outputs.py --confirm          # Skip confirmation prompt
 
 Always use `--dry-run` first to preview what will be deleted, and consider using `--keep-best` to preserve the best models from each run.
 
+
+## Nextflow Integration (NEW!)
+
+F.A.D.E now includes a fully integrated Nextflow workflow that provides better workflow management, HPC integration, and fault tolerance.
+
+### Quick Start with Nextflow
+
+```bash
+# 1. Setup environment (one-time)
+./setup_nextflow_integration.sh
+
+# 2. Run integrated workflow
+./run_nextflow_integrated.sh "Find molecules targeting KRAS G12D with good BBB permeability"
+```
+
+### Benefits of Nextflow Integration
+
+- **Automatic workflow orchestration** with dependency management
+- **HPC-optimized resource allocation** for each pipeline stage
+- **Resume capability** from failed steps without losing progress
+- **Parallel execution** of independent tasks
+- **Comprehensive monitoring** and reporting
+- **Better error handling** and recovery mechanisms
+
+### Nextflow Usage Examples
+
+```bash
+# Basic usage
+./run_nextflow_integrated.sh "Design EGFR inhibitors for lung cancer"
+
+# With custom parameters
+./run_nextflow_integrated.sh -m 200 -i 3 -d glide "Target BRAF V600E for melanoma"
+
+# Debug mode with detailed tracing
+./run_nextflow_integrated.sh --debug --trace "Test query"
+
+# Dry run for testing
+./run_nextflow_integrated.sh --dry-run "Validate workflow"
+
+# Resume failed pipeline
+./run_nextflow_integrated.sh --resume "Original query"
+```
+
+### Nextflow vs Python Execution
+
+| Feature | Python (`main.py`) | Nextflow Integration |
+|---------|-------------------|---------------------|
+| Workflow Management | Manual | Automatic |
+| Resource Allocation | Basic | HPC-Optimized |
+| Error Recovery | Limited | Resume from failure |
+| Parallel Execution | Minimal | Automatic |
+| Monitoring | Basic logging | Comprehensive reports |
+| HPC Integration | Manual SLURM | Automatic submission |
+
+Both execution methods are supported and use the same underlying Python agents.
+
+### Documentation
+
+- **Complete Guide**: `Nextflow_Integration_Guide.md`
+- **Architecture**: `Nextflow_Workflow_Architecture.md`
+- **Status**: `NEXTFLOW_INTEGRATION_STATUS.md`
+

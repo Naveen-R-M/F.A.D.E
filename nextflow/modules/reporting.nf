@@ -60,7 +60,7 @@ process finalReporting {
     echo "# F.A.D.E Drug Discovery Report" > analysis_summary.md
     echo "## Summary: 1 candidate identified" >> analysis_summary.md
     echo "MOL_001" > top_candidates.sdf
-    echo "\\$\\$\\$\\$" >> top_candidates.sdf
+    echo "End of SDF" >> top_candidates.sdf
     """
 }
 

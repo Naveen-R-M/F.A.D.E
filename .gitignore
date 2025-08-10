@@ -123,3 +123,21 @@ nextflow/dag.*
 # Nextflow Tower (if used)
 nextflow/.tower/
 nextflow/tower.yml
+
+# Organized structure ignores
+/results_*/
+/work*/
+/test_*/
+*.pyc
+__pycache__/
+.pytest_cache/
+.nextflow*
+*.log
+*.tmp
+*.backup
+
+# Keep organized directories
+!/scripts/
+!/docs/
+!/tests/
+!/examples/

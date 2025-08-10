@@ -20,11 +20,22 @@ process targetSelection {
     path 'requirements.json', emit: requirements
     
     script:
-    def api_key = params.gemini_api_key ?: System.getenv('GEMINI_API_KEY') ?: ""
+    def api_key = params.gemini_api_key ?: ""
     def model = params.gemini_model ?: "models/gemini-2.5-flash"
     """
     # Set up environment
     export PYTHONPATH="${projectDir}:\$PYTHONPATH"
+    
+    # Load .env file if it exists
+    if [ -f "${projectDir}/.env" ]; then
+        source "${projectDir}/.env"
+    fi
+    
+    # Debug output (simplified)
+    echo "Running target selection with API key length: \${#GEMINI_API_KEY}"
+    echo "Params API key length: ${api_key.length()}"
+    
+    # Use the API key from parameters (passed from Nextflow config)
     export GEMINI_API_KEY="${api_key}"
     
     # Run the target selector agent

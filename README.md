@@ -304,3 +304,29 @@ Both execution methods are supported and use the same underlying Python agents.
 - **Architecture**: `Nextflow_Workflow_Architecture.md`
 - **Status**: `NEXTFLOW_INTEGRATION_STATUS.md`
 
+
+## 📁 Project Organization
+
+F.A.D.E now features a clean, organized structure:
+
+- **`agents/`** - Core AI agents for drug discovery
+- **`nextflow/`** - Nextflow workflow implementation  
+- **`scripts/`** - Organized execution, setup, and maintenance scripts
+- **`docs/`** - Comprehensive documentation
+- **`utils/`** - Utility libraries and clients
+- **`data/`** - Input/output data management
+
+See `PROJECT_STRUCTURE.md` for detailed organization overview.
+
+### Quick Start (Organized)
+```bash
+# 1. Environment setup
+./scripts/setup/setup_nextflow_env.sh
+
+# 2. Run workflow  
+./scripts/execution/run_nextflow_with_api.sh "Your query"
+
+# 3. Maintenance
+./scripts/maintenance/monitor_all_jobs.py
+```
+

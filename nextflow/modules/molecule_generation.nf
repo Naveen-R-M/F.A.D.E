@@ -67,7 +67,7 @@ process moleculeGeneration {
     echo "MOL_001" > molecules.sdf
     echo "  F.A.D.E Generated" >> molecules.sdf
     echo "  SMILES: CCO" >> molecules.sdf
-    echo '\$\$\$\$' >> molecules.sdf
+    echo "End of SDF" >> molecules.sdf
     echo '[{"id": "MOL_001", "smiles": "CCO"}]' > molecules.json
     echo '{"total_generated": 1, "valid_molecules": 1}' > generation_stats.json
     """

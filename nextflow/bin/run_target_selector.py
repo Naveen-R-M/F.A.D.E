@@ -67,38 +67,102 @@ def main():
         logger.info(f"Processing query: {args.query}")
         result = target_selector.process(args.query)
         
-        # Extract outputs
-        protein_targets = result.get("protein_targets", [])
+        # Extract outputs - CORRECTED DATA STRUCTURE
+        parsed_data = result.get("parsed_data", {})
+        protein_targets = parsed_data.get("protein_targets", [])
         sequences = result.get("sequences", {})
         configs = result.get("config_files", {})
         
+        print(f"DEBUG: Found {len(protein_targets)} protein targets")
+        print(f"DEBUG: Found {len(sequences)} sequences")
+        
         # Write target_info.json
         if protein_targets:
+            first_target = protein_targets[0]
+            target_name = first_target.get("name", "unknown")
+            
+            # Get UniProt accession from sequences data
+            uniprot_id = "unknown"
+            if target_name in sequences:
+                seq_data = sequences[target_name]
+                uniprot_id = seq_data.get("accession", "unknown")  # Use 'accession', not 'uniprot_id'
+                print(f"DEBUG: Found accession {uniprot_id} for {target_name}")
+            
             target_info = {
-                "target": protein_targets[0].get("name", "unknown"),
-                "uniprot_id": protein_targets[0].get("uniprot_id", "unknown"),
-                "pdb_id": protein_targets[0].get("pdb_id", "none"),
-                "description": protein_targets[0].get("description", ""),
-                "mutation": protein_targets[0].get("mutation", ""),
-                "all_targets": protein_targets
+                "target": target_name,
+                "uniprot_id": uniprot_id,
+                "pdb_id": first_target.get("pdb_id", "none"),
+                "description": first_target.get("description", ""),
+                "mutation": first_target.get("mutation", ""),
+                "mutations": first_target.get("mutations", []),
+                "all_targets": protein_targets,
+                "success": True
             }
         else:
-            target_info = {"error": "No targets identified"}
+            target_info = {"error": "No targets identified", "target": "unknown", "success": False}
             
         with open(os.path.join(args.output_dir, "target_info.json"), "w") as f:
             json.dump(target_info, f, indent=2)
         
-        # Write protein.fasta (use first target)
+        # Write protein.fasta - FIXED FASTA HEADER GENERATION
         if sequences and protein_targets:
-            first_target = protein_targets[0].get("name")
-            if first_target and first_target in sequences:
-                seq_info = sequences[first_target]
+            first_target_name = protein_targets[0].get("name")
+            print(f"DEBUG: Processing FASTA for target: {first_target_name}")
+            
+            if first_target_name and first_target_name in sequences:
+                seq_info = sequences[first_target_name]
+                print(f"DEBUG: Sequence info keys: {list(seq_info.keys())}")
+                
+                # Extract all the information correctly
+                accession = seq_info.get('accession', 'unknown')
+                sequence = seq_info.get('sequence', '')
+                protein_name = seq_info.get('protein_name', first_target_name)
+                gene_name = seq_info.get('gene_name', first_target_name)
+                organism = seq_info.get('organism', '')
+                
+                print(f"DEBUG: Accession: {accession}, Protein: {protein_name}, Gene: {gene_name}")
+                
                 with open(os.path.join(args.output_dir, "protein.fasta"), "w") as f:
-                    f.write(f">{seq_info.get('uniprot_id', 'unknown')}|{first_target}\n")
-                    f.write(f"{seq_info.get('sequence', '')}\n")
+                    # Format: >UniProt_ID|Gene_Name|Protein_Name [Organism]
+                    if organism:
+                        header = f">{accession}|{gene_name}|{protein_name} [{organism}]"
+                    else:
+                        header = f">{accession}|{gene_name}|{protein_name}"
+                    
+                    f.write(f"{header}\n")
+                    f.write(f"{sequence}\n")
+                
+                print(f"DEBUG: FASTA written with header: {header}")
+                print(f"DEBUG: Sequence length: {len(sequence)} amino acids")
+            else:
+                print(f"DEBUG: No sequence found for {first_target_name}")
+                with open(os.path.join(args.output_dir, "protein.fasta"), "w") as f:
+                    f.write(f">unknown|{first_target_name}|No sequence available\n")
+                    f.write("UNKNOWN\n")
+        else:
+            print("DEBUG: No sequences or targets found - writing empty FASTA")
+            with open(os.path.join(args.output_dir, "protein.fasta"), "w") as f:
+                f.write(">unknown|unknown|Unknown protein\n")
+                f.write("UNKNOWN\n")
         
-        # Write requirements.json
-        requirements = result.get("drug_requirements", {})
+        # Write requirements.json - CORRECTED STRUCTURE
+        molecule_properties = parsed_data.get("molecule_properties", {})
+        requirements = {}
+        
+        # Extract requirements from molecule_properties if available
+        if molecule_properties:
+            for key, value in molecule_properties.items():
+                if value is not None:
+                    requirements[key] = value
+        
+        # Add default binding affinity
+        if not requirements:
+            requirements = {"binding_affinity": "< -8 kcal/mol"}
+        elif "binding_affinity" not in requirements:
+            requirements["binding_affinity"] = "< -8 kcal/mol"
+        
+        requirements["success"] = len(protein_targets) > 0
+        
         with open(os.path.join(args.output_dir, "requirements.json"), "w") as f:
             json.dump(requirements, f, indent=2)
         

@@ -33,7 +33,7 @@ params.max_time = '240.h'
 // Environment and API configuration
 params.fade_env_path = "${System.getenv('SCRATCH')}/conda-envs/fade"
 params.gemini_api_key = System.getenv('GEMINI_API_KEY') ?: ""
-params.gemini_model = "models/gemini-2.5-flash"
+params.gemini_model = System.getenv('GEMINI_MODEL') ?: "models/gemini-2.5-flash"
 
 // Container/Module paths
 params.alphafold_container = "/shared/container_repository/AlphaFold/alphafold3.sif"
@@ -54,13 +54,14 @@ log.info """
 ║                  F.A.D.E NEXTFLOW PIPELINE v2.0                  ║
 ║                    (Integrated Python Agents)                    ║
 ╚══════════════════════════════════════════════════════════════════╝
-Query           : ${params.query}
-Output directory: ${params.output_dir}
-Max molecules   : ${params.max_molecules}
-Max iterations  : ${params.max_iterations}
-Docking method  : ${params.docking_method}
-Conda env       : ${params.fade_env_path}
-=====================================
+Query            :  ${params.query}
+Output directory :  ${params.output_dir}
+Max molecules    :  ${params.max_molecules}
+Max iterations   :  ${params.max_iterations}
+Docking method   :  ${params.docking_method}
+Conda env        :  ${params.fade_env_path}
+Work Directory   :  ${projectDir}
+======================================================================
 """
 
 // Main workflow

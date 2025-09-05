@@ -34,13 +34,35 @@ process structurePrediction {
     export PYTHONPATH="${projectDir}:\$PYTHONPATH"
     export GEMINI_API_KEY="${api_key}"
     
+    # Check for script in expected locations
+    SCRIPT_LOCATIONS=(
+        "${projectDir}/nextflow/bin/run_structure_predictor.py"
+        "${projectDir}/bin/run_structure_predictor.py"
+        "./run_structure_predictor.py"
+        "run_structure_predictor.py"
+    )
+    
+    SCRIPT_FOUND=""
+    for location in "\${SCRIPT_LOCATIONS[@]}"; do
+        if [ -f "\$location" ]; then
+            SCRIPT_FOUND="\$location"
+            chmod +x "\$SCRIPT_FOUND"
+            break
+        fi
+    done
+    
+    if [ -z "\$SCRIPT_FOUND" ]; then
+        echo "ERROR: run_structure_predictor.py not found!"
+        exit 1
+    fi
+    
     # Load required modules for AlphaFold3
     module load AlphaFold3/3.0.0 || echo "AlphaFold3 module not available"
     
     # Run the structure predictor agent
-    run_structure_predictor.py \\
-        --target-info ${target_info} \\
-        --fasta-file ${fasta} \\
+    python "\$SCRIPT_FOUND" \\
+        --target-info "${target_info}" \\
+        --fasta-file "${fasta}" \\
         --output-dir . \\
         --api-key "${api_key}" \\
         --model "${model}" \\

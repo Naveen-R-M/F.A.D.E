@@ -1,1 +1,0 @@
-scripts/setup/setup_nextflow_env.sh

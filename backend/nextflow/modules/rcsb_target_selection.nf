@@ -23,27 +23,25 @@ process rcsbTargetSelection {
     script:
     def api_key = params.gemini_api_key ?: ""
     def model = params.gemini_model ?: "models/gemini-2.5-flash"
+    def script_path = "${projectDir}/bin/run_rcsb_target_selector.py"
     """
+    # Debug project directory resolution
+    echo "=== DEBUG PROJECT DIRECTORY ==="
+    echo "Resolved projectDir: ${projectDir}"
+    echo "Resolved script_path: ${script_path}"
+    echo "Current working directory: \$PWD"
+    echo "Script exists check:"
+    ls -la "${script_path}" || echo "Script NOT found at: ${script_path}"
+    echo "Contents of bin directory:"
+    ls -la "${projectDir}/bin/" 2>/dev/null || echo "Bin directory not found at: ${projectDir}/bin/"
+    echo "=== END DEBUG ==="
+    
     # Set up environment
     export PYTHONPATH="${projectDir}:\$PYTHONPATH"
-    
-    # Load .env file if it exists
-    if [ -f "${projectDir}/.env" ]; then
-        source "${projectDir}/.env"
-    fi
-    
-    # Debug output
-    echo "Running RCSB target selection with query: ${query}"
-    echo "API key length: \${#GEMINI_API_KEY}"
-    echo "Project directory: ${projectDir}"
-    echo "Looking for script at: ${projectDir}/bin/run_rcsb_target_selector.py"
-    ls -la "${projectDir}/bin/" || echo "bin directory not found"
-    
-    # Use the API key from parameters
     export GEMINI_API_KEY="${api_key}"
     
     # Run the RCSB target selector agent
-    python "${projectDir}/bin/run_rcsb_target_selector.py" \\
+    python "${script_path}" \\
         --query "${query}" \\
         --output-dir . \\
         --api-key "${api_key}" \\

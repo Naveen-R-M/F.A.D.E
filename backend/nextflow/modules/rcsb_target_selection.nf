@@ -30,10 +30,18 @@ process rcsbTargetSelection {
     echo "Resolved projectDir: ${projectDir}"
     echo "Resolved script_path: ${script_path}"
     echo "Current working directory: \$PWD"
-    echo "Script exists check:"
-    ls -la "${script_path}" || echo "Script NOT found at: ${script_path}"
-    echo "Contents of bin directory:"
-    ls -la "${projectDir}/bin/" 2>/dev/null || echo "Bin directory not found at: ${projectDir}/bin/"
+    
+    # Check if script exists
+    if [ -f "${script_path}" ]; then
+        echo "✓ Script found at: ${script_path}"
+        ls -la "${script_path}"
+    else
+        echo "✗ Script NOT found at: ${script_path}"
+        echo "Contents of bin directory:"
+        ls -la "${projectDir}/bin/" 2>/dev/null || echo "Bin directory not found"
+        echo "Contents of project directory:"
+        ls -la "${projectDir}/" 2>/dev/null || echo "Project directory not found"
+    fi
     echo "=== END DEBUG ==="
     
     # Set up environment

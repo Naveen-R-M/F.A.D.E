@@ -80,7 +80,6 @@ nextflow run main.nf \
     --max_molecules 10 \
     --gemini_api_key "$GEMINI_API_KEY" \
     --fade_env_path "${CONDA_ENV_PATH}" \
-    -profile local \
     -work-dir "${SCRIPT_DIR}/work_api_test"
 
 EXIT_CODE=$?
@@ -184,7 +183,6 @@ nextflow run main.nf \
     --max_molecules 10 \
     --gemini_api_key "$GEMINI_API_KEY" \
     --fade_env_path "${CONDA_ENV_PATH}" \
-    -profile local \
     -work-dir "${SCRIPT_DIR}/work_api_test"
 
 EXIT_CODE=$?

@@ -131,8 +131,8 @@ export NXF_JAVA_HOME=$JAVA_HOME
 export NXF_OPTS="-Xms1g -Xmx4g"
 
 # Load .env file if it exists
-if [ -f "$SCRATCH/F.A.D.E/.env" ]; then
-    export $(grep -v '^#' $SCRATCH/F.A.D.E/.env | xargs)
+if [ -f "$SCRATCH/F.A.D.E/backend/.env" ]; then
+    export $(grep -v '^#' $SCRATCH/F.A.D.E/backend/.env | xargs)
 fi
 
 # Check API key
@@ -145,7 +145,7 @@ fi
 mkdir -p $NXF_WORK $NXF_TEMP $SINGULARITY_CACHEDIR
 
 # Change to nextflow directory
-cd $SCRATCH/F.A.D.E/nextflow
+cd $SCRATCH/F.A.D.E/backend/nextflow
 
 # Build the Nextflow command
 NF_CMD="$NEXTFLOW run main.nf"

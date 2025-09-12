@@ -100,7 +100,7 @@ class GeminiClient:
         while attempt < max_retries:
             try:
                 model = genai.GenerativeModel(model_name)
-                response = model.generate_content(
+                response = model.generate_text(
                     prompt,
                     generation_config=generation_config
                 )

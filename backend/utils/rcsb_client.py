@@ -52,7 +52,7 @@ class RCSBClient:
             Response format: Just the PDB ID or "NONE"
             """
             
-            response = llm_client.generate_content(extraction_prompt)
+            response = llm_client.generate_text(extraction_prompt)
             pdb_id = response.strip().upper()
             
             if pdb_id != "NONE" and len(pdb_id) == 4 and pdb_id.isalnum():
@@ -108,7 +108,7 @@ class RCSBClient:
             Focus on the most druggable and well-studied target.
             """
             
-            response = llm_client.generate_content(prompt)
+            response = llm_client.generate_text(prompt)
             
             # Parse JSON response
             try:
@@ -405,7 +405,7 @@ class RCSBClient:
             Return only the index number (0-{len(structure_summaries)-1}) of the best structure.
             """
             
-            response = llm_client.generate_content(prompt)
+            response = llm_client.generate_text(prompt)
             
             try:
                 selected_index = int(response.strip())

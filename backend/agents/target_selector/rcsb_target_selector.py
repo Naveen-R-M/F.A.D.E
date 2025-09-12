@@ -155,7 +155,7 @@ class RCSBTargetSelector(BaseAgent, AgenticMixin):
         
         # Use Gemini to extract structured data with enhanced prompt
         parsed_data = self.execute_with_retry(
-            lambda: self._extract_with_enhanced_prompt(enhanced_prompt),
+            lambda: self.gemini_client.extract_protein_info(query),
             operation_name="Enhanced query parsing"
         )
         
@@ -174,7 +174,7 @@ class RCSBTargetSelector(BaseAgent, AgenticMixin):
         Returns:
             Parsed data dictionary
         """
-        response = self.gemini_client.generate_content(prompt)
+        response = self.gemini_client.generate_text(prompt)
         
         try:
             # Try to parse as JSON

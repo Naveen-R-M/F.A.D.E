@@ -35,6 +35,9 @@ process rcsbTargetSelection {
     # Debug output
     echo "Running RCSB target selection with query: ${query}"
     echo "API key length: \${#GEMINI_API_KEY}"
+    echo "Project directory: ${projectDir}"
+    echo "Looking for script at: ${projectDir}/bin/run_rcsb_target_selector.py"
+    ls -la "${projectDir}/bin/" || echo "bin directory not found"
     
     # Use the API key from parameters
     export GEMINI_API_KEY="${api_key}"

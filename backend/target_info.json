@@ -1,0 +1,15 @@
+{
+  "target": "EGFR",
+  "pdb_id": "6DUK",
+  "source": "rcsb_pdb",
+  "resolution": 2.2,
+  "method": "X-RAY DIFFRACTION",
+  "organism": null,
+  "ligands": [
+    "ANP",
+    "MG"
+  ],
+  "structure_file": "C:\\Users\\navee\\Projects\\Hackathon\\F.A.D.E\\backend\\data\\outputs\\structures\\EGFR\\6DUK.pdb",
+  "confidence": 1.0,
+  "mutations": []
+}

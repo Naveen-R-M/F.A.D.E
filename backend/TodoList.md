@@ -1,91 +1,64 @@
-# F.A.D.E Implementation Todo List
+# F.A.D.E Minimal Implementation Todo List
 
-## Initial Project Setup
-- ✅ Create conda environment (fade)
-- ✅ Set up project structure
-- ✅ Create README.md
-- ✅ Create .gitignore
-- ✅ Create .env.example
-- ✅ Create .env file with API keys
+## Current Status: RCSB Target Selection Only
 
-## Step 1: Target Selector Agent (Completed)
-- ✅ Create base agent class (BaseAgent)
-- ✅ Implement Gemini client utility
-- ✅ Implement UniProt client utility
-- ✅ Implement Config Generator utility
-- ✅ Create job templates for structure prediction and docking
-- ✅ Implement TargetSelector agent
-- ✅ Create main script to demonstrate usage
-- ✅ Write unit tests for TargetSelector agent
-- ✅ Install required packages for TargetSelector agent
-- ✅ Test TargetSelector agent with example queries
+### ✅ COMPLETED
+- **RCSB Target Selection**: Complete RCSB PDB-based target identification
+  - LLM-powered query parsing
+  - Intelligent structure search and ranking
+  - PDB structure download
+  - FASTA sequence extraction
+  - Requirements parsing
 
-## Step 1B: Agentic Target Selector Enhancements (Completed)
-- ✅ Design agentic architecture (see docs/design/agentic_target_selector.md)
-- ✅ Implement agentic mixin for base agent
-- ✅ Create error analysis component for API errors
-- ✅ Implement query reformulation for failed API calls
-- ✅ Add sequence validation for scientific accuracy
-- ✅ Create adaptive search strategy for protein retrieval
-- ✅ Integrate LLM-powered decision making
-- ✅ Update unit tests for agentic components
-- ✅ Benchmark agentic vs. non-agentic performance
+### 🔄 CURRENT PIPELINE
+```
+Query → RCSB Target Selection → END
+```
 
-## Step 2: Structure Predictor Agent (Completed)
-- ✅ Implement StructurePredictor agent
-- ✅ Implement PDB file parser/processor
-- ✅ Create structure validation utilities
-- ✅ Implement binding site detection
-- ✅ Write unit tests for StructurePredictor agent
-- ✅ Test StructurePredictor agent with example proteins
+**Outputs:**
+- `target_info.json`: Target and PDB metadata
+- `structure.pdb`: Downloaded PDB structure
+- `protein.fasta`: Protein sequence
+- `requirements.json`: Parsed drug requirements
 
-## Step 3: Molecule Generator Agent (Completed)
-- ✅ Implement MoleculeGenerator agent
-- ✅ Integrate with RDKit
-- ✅ Implement molecule property calculators
-- ✅ Create molecule filtering utilities
-- ✅ Write unit tests for MoleculeGenerator agent
-- ✅ Test MoleculeGenerator agent with example targets
+## 📋 TODO: BUILD AS WE GO
 
-## Step 4: Evaluator Agent
-- [ ] Implement Evaluator agent
-- [ ] Create property prediction models/interfaces
-- [ ] Implement scoring functions
-- [ ] Write unit tests for Evaluator agent
-- [ ] Test Evaluator agent with example molecules
+### Next Steps (To be added based on instructions)
+- [ ] **Step 2**: TBD - Next component to be specified
+- [ ] **Step 3**: TBD - Next component to be specified  
+- [ ] **Step 4**: TBD - Next component to be specified
+- [ ] **Step 5**: TBD - Next component to be specified
+- [ ] **Step 6**: TBD - Next component to be specified
 
-## Step 5: Docking Agent
-- [ ] Implement Docking agent
-- [ ] Create interfaces for docking software
-- [ ] Implement pose analysis utilities
-- [ ] Write unit tests for Docking agent
-- [ ] Test Docking agent with example receptor-ligand pairs
+### 🗂️ BACKED UP COMPONENTS
+All previous pipeline components have been moved to `nextflow/modules/backup/` and `nextflow/bin/backup/`:
+- Structure Prediction (AlphaFold3-based)
+- Binding Site Analysis
+- Molecule Generation  
+- Docking
+- Lead Optimization
+- Reporting
 
-## Step 6: Refiner Agent
-- [ ] Implement Refiner agent
-- [ ] Create molecule modification utilities
-- [ ] Implement learning from docking results
-- [ ] Write unit tests for Refiner agent
-- [ ] Test Refiner agent with example molecules
+These can be restored and adapted as needed.
 
-## Step 7: Integration and Workflow
-- [ ] Create workflow orchestration
-- [ ] Implement memory manager for tracking history
-- [ ] Create agent communication interfaces
-- [ ] Implement parallel execution capabilities
-- [ ] Write unit tests for workflow orchestration
-- [ ] Test full workflow with example queries
+## 🚀 CURRENT TESTING
 
-## Step 8: Documentation and Examples
-- [ ] Write detailed documentation for each agent
-- [ ] Create example queries and expected outputs
-- [ ] Write installation and setup guide
-- [ ] Create usage tutorials
-- [ ] Document API and interfaces
+To test the minimal pipeline:
 
-## Step 9: Deployment and CI/CD
-- [ ] Set up continuous integration
-- [ ] Create containerized version
-- [ ] Write deployment scripts for HPC
-- [ ] Create user-friendly CLI
-- [ ] Implement logging and monitoring
+```bash
+cd nextflow
+export GEMINI_API_KEY="your_api_key"
+nextflow run main.nf --query "Find drugs targeting EGFR for lung cancer"
+```
+
+## 📊 PIPELINE STATUS
+
+- **Active Modules**: 1 (RCSB Target Selection)
+- **Backed Up Modules**: 7 (Available for restoration)  
+- **Pipeline Complexity**: Minimal (Single step)
+- **Resource Requirements**: Low (CPU only, no GPU)
+- **Dependencies**: RCSB PDB API, Gemini API
+
+---
+
+**Ready for next component based on your instructions.**

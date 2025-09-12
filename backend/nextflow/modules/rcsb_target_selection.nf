@@ -40,7 +40,7 @@ process rcsbTargetSelection {
     export GEMINI_API_KEY="${api_key}"
     
     # Run the RCSB target selector agent
-    python "${projectDir}/nextflow/bin/run_rcsb_target_selector.py" \\
+    python "${projectDir}/bin/run_rcsb_target_selector.py" \\
         --query "${query}" \\
         --output-dir . \\
         --api-key "${api_key}" \\

@@ -204,92 +204,35 @@ class RCSBClient:
         gene_symbol = search_terms.get("gene_symbol", "")
         organism = search_terms.get("organism", "Homo sapiens")
         
-        # Strategy 1: Gene symbol + organism (most specific)
-        if gene_symbol:
-            strategies.append({
-                "description": f"Gene symbol '{gene_symbol}' in {organism}",
-                "query": {
-                    "type": "group",
-                    "logical_operator": "and",
-                    "nodes": [
-                        {
-                            "type": "terminal",
-                            "service": "text",
-                            "parameters": {
-                                "attribute": "rcsb_entity_source_organism.taxonomy_lineage.name",
-                                "operator": "exact_match",
-                                "value": organism
-                            }
-                        },
-                        {
-                            "type": "terminal", 
-                            "service": "text",
-                            "parameters": {
-                                "attribute": "rcsb_polymer_entity.rcsb_gene_name.value",
-                                "operator": "exact_match",
-                                "value": gene_symbol.upper()
-                            }
-                        }
-                    ]
-                }
-            })
+        # Only use title search since gene name attributes are not searchable
+        strategies = []
         
-        # Strategy 2: Protein name + organism
+        # Strategy 1: Title search with protein name
         if primary_name:
             strategies.append({
-                "description": f"Protein name '{primary_name}' in {organism}",
-                "query": {
-                    "type": "group",
-                    "logical_operator": "and", 
-                    "nodes": [
-                        {
-                            "type": "terminal",
-                            "service": "text",
-                            "parameters": {
-                                "attribute": "rcsb_entity_source_organism.taxonomy_lineage.name",
-                                "operator": "exact_match",
-                                "value": organism
-                            }
-                        },
-                        {
-                            "type": "terminal",
-                            "service": "text", 
-                            "parameters": {
-                                "attribute": "struct.title",
-                                "operator": "contains_words",
-                                "value": primary_name
-                            }
-                        }
-                    ]
-                }
-            })
-        
-        # Strategy 3: Gene symbol only (broader)
-        if gene_symbol:
-            strategies.append({
-                "description": f"Gene symbol '{gene_symbol}' (any organism)",
-                "query": {
-                    "type": "terminal",
-                    "service": "text",
-                    "parameters": {
-                        "attribute": "rcsb_polymer_entity.rcsb_gene_name.value", 
-                        "operator": "exact_match",
-                        "value": gene_symbol.upper()
-                    }
-                }
-            })
-        
-        # Strategy 4: Protein name only (broadest)
-        if primary_name:
-            strategies.append({
-                "description": f"Protein name '{primary_name}' (any organism)",
+                "description": f"Title search for '{primary_name}'",
                 "query": {
                     "type": "terminal",
                     "service": "text",
                     "parameters": {
                         "attribute": "struct.title",
-                        "operator": "contains_words", 
+                        "operator": "contains_words",
                         "value": primary_name
+                    }
+                }
+            })
+        
+        # Strategy 2: Title search with gene symbol
+        if gene_symbol and gene_symbol != primary_name:
+            strategies.append({
+                "description": f"Title search for '{gene_symbol}'",
+                "query": {
+                    "type": "terminal",
+                    "service": "text",
+                    "parameters": {
+                        "attribute": "struct.title",
+                        "operator": "contains_words",
+                        "value": gene_symbol
                     }
                 }
             })

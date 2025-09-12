@@ -361,14 +361,16 @@ class RCSBTargetSelector(BaseAgent, AgenticMixin):
         """
         try:
             # Try using BioPython if available
-            try:
-                from Bio import PDB
-                from Bio import SeqIO
-                from Bio.Seq import Seq
-                from Bio.SeqRecord import SeqRecord
-                
-                parser = PDB.PDBParser(QUIET=True)
-                structure = parser.get_structure("structure", pdb_file)
+            from Bio import PDB
+            from Bio import SeqIO
+            from Bio.Seq import Seq
+            from Bio.SeqRecord import SeqRecord
+            from Bio.PDB.Polypeptide import three_to_one
+            
+            self.logger.info("BioPython available - using advanced PDB parsing")
+            
+            parser = PDB.PDBParser(QUIET=True)
+            structure = parser.get_structure("structure", pdb_file)
                 
                 sequences = []
                 for model in structure:
@@ -377,7 +379,7 @@ class RCSBTargetSelector(BaseAgent, AgenticMixin):
                         for residue in chain:
                             if PDB.is_aa(residue):
                                 try:
-                                    seq += PDB.protein_letters_3to1[residue.get_resname()]
+                                    seq += three_to_one(residue.get_resname())
                                 except KeyError:
                                     seq += "X"  # Unknown residue
                         
@@ -399,12 +401,15 @@ class RCSBTargetSelector(BaseAgent, AgenticMixin):
                     with open(fasta_path, "w") as f:
                         SeqIO.write(record, f, "fasta")
                     
-                    self.logger.info(f"Extracted sequence from PDB: {fasta_path}")
+                    self.logger.info(f"Extracted sequence from PDB using BioPython: {fasta_path}")
                     return fasta_path
                     
-            except ImportError:
-                self.logger.warning("BioPython not available for PDB sequence extraction")
-                pass
+        except ImportError:
+            self.logger.warning("BioPython not available for PDB sequence extraction")
+            pass
+        except Exception as e:
+            self.logger.warning(f"BioPython parsing failed: {e}, falling back to simple method")
+            pass
             
             # Fallback: simple PDB parsing
             return self._simple_pdb_sequence_extraction(pdb_file, output_dir, target_name)

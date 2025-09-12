@@ -93,23 +93,36 @@ class GeminiClient:
             "max_output_tokens": max_tokens,
         }
         
-        # Add retry logic for API requests
+        # Add retry logic for API requests with timeout
         max_retries = 3
         attempt = 0
         
         while attempt < max_retries:
             try:
+                self.logger.info(f"Making Gemini API request (attempt {attempt + 1}/{max_retries})")
+                
                 model = genai.GenerativeModel(model_name)
-                response = model.generate_text(
+                response = model.generate_content(
                     prompt,
-                    generation_config=generation_config
+                    generation_config=generation_config,
+                    request_options={"timeout": 30}  # 30-second timeout
                 )
+                self.logger.info(f"API request successful")
                 return response.text
+                
             except Exception as e:
                 attempt += 1
-                self.logger.warning(f"API request failed (attempt {attempt}/{max_retries}): {e}")
+                self.logger.warning(f"API request failed (attempt {attempt}/{max_retries}): {type(e).__name__}: {e}")
+                
                 if attempt >= max_retries:
+                    self.logger.error(f"All API attempts failed. Last error: {e}")
                     raise
+                
+                # Wait before retry with exponential backoff
+                import time
+                wait_time = min(2 ** attempt, 10)  # Max 10 seconds
+                self.logger.info(f"Waiting {wait_time} seconds before retry...")
+                time.sleep(wait_time)
         
         # This should not be reached due to the raise in the loop
         return ""

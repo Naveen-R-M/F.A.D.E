@@ -351,7 +351,7 @@ class RCSBClient:
     def select_best_structure(self, llm_client, structures: List[Dict[str, Any]], 
                             target_info: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
-        Use LLM to select the best structure from search results.
+        Select the best structure from search results (simplified version).
         
         Args:
             llm_client: LLM client for decision making
@@ -367,68 +367,40 @@ class RCSBClient:
         if len(structures) == 1:
             return structures[0]
         
-        try:
-            # Create structure summaries for LLM
-            structure_summaries = []
-            for i, struct in enumerate(structures[:5]):  # Limit to top 5 for LLM processing
-                summary = {
-                    "index": i,
-                    "pdb_id": struct.get("pdb_id", "unknown"),
-                    "title": struct.get("title", "")[:100],  # Truncate long titles
-                    "method": struct.get("experimental_method", "unknown"),
-                    "resolution": struct.get("resolution"),
-                    "organism": struct.get("organism", "unknown"),
-                    "ligands": struct.get("ligands", [])
-                }
-                structure_summaries.append(summary)
+        # Simple ranking without LLM to avoid API issues
+        self.logger.info(f"Selecting best structure from {len(structures)} candidates using simple ranking")
+        
+        best_structure = None
+        best_score = 0
+        
+        for struct in structures[:5]:  # Limit to top 5
+            score = 0
+            resolution = struct.get("resolution")
+            method = struct.get("experimental_method", "").upper()
+            ligands = struct.get("ligands", [])
             
-            # Create selection prompt
-            prompt = f"""
-            Select the best protein structure for drug discovery from these candidates:
+            # Resolution scoring
+            if resolution and resolution < 2.5:
+                score += 50
+            elif resolution and resolution < 3.0:
+                score += 30
             
-            Target Information:
-            - Main target: {target_info.get('protein_targets', [{}])[0].get('name', 'unknown')}
-            - Disease: {target_info.get('disease_context', 'not specified')}
-            - Requirements: {target_info.get('requirements', {})}
+            # Method scoring
+            if "X-RAY" in method:
+                score += 30
             
-            Structure Candidates:
-            {json.dumps(structure_summaries, indent=2)}
+            # Ligand scoring
+            if ligands:
+                score += 20
             
-            Selection Criteria (in order of importance):
-            1. Human protein (Homo sapiens) preferred
-            2. High resolution (< 2.5 Å preferred)
-            3. X-ray crystallography preferred
-            4. Contains bound ligands (indicates druggable sites)
-            5. Recent structure (newer is better)
-            6. Clear, descriptive title matching target
-            
-            Return only the index number (0-{len(structure_summaries)-1}) of the best structure.
-            """
-            
-            response = llm_client.generate_text(prompt)
-            
-            try:
-                selected_index = int(response.strip())
-                if 0 <= selected_index < len(structures):
-                    selected = structures[selected_index]
-                    self.logger.info(f"LLM selected structure: {selected.get('pdb_id', 'unknown')}")
-                    return selected
-            except ValueError:
-                pass
-            
-            # Fallback: return first structure with good resolution
-            for struct in structures:
-                resolution = struct.get("resolution")
-                if resolution and resolution < 3.0:
-                    self.logger.info(f"Fallback selected structure: {struct.get('pdb_id', 'unknown')}")
-                    return struct
-            
-            # Last fallback: return first structure
-            return structures[0]
-            
-        except Exception as e:
-            self.logger.error(f"Error in structure selection: {e}")
-            return structures[0] if structures else None
+            if score > best_score:
+                best_score = score
+                best_structure = struct
+        
+        if best_structure:
+            self.logger.info(f"Selected structure: {best_structure.get('pdb_id', 'unknown')} (score: {best_score})")
+        
+        return best_structure or structures[0]  # Fallback to first
     
     def download_structure(self, pdb_id: str, output_dir: str) -> str:
         """
@@ -446,7 +418,7 @@ class RCSBClient:
         
         try:
             pdb_url = f"{self.base_download_url}/{pdb_id}.pdb"
-            response = requests.get(pdb_url, timeout=30)
+            response = requests.get(pdb_url, timeout=60)  # Increased timeout
             response.raise_for_status()
             
             with open(pdb_path, "w") as f:

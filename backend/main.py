@@ -1,383 +1,177 @@
-#!/usr/bin/env python3
 """
-Main entry point for F.A.D.E
+Main entry point for F.A.D.E drug discovery pipeline using LangGraph.
 """
 
-import os
 import sys
-import json
 import argparse
-import time
-import datetime
-import subprocess
-from typing import Any, Dict, Optional
-
-from dotenv import load_dotenv
-from utils.logging import setup_logging, get_logger
-from utils.summary import SummaryLogger
-from agents.target_selector import TargetSelector
-from agents.structure_predictor.structure_predictor import StructurePredictor
-from agents.molecule_generator.molecule_generator import MoleculeGenerator
-
-
-def setup_logging_with_output_dir(log_level: str = "INFO", output_dir: Optional[str] = None) -> None:
-    """
-    Set up logging for the application with output directory integration.
-    
-    Args:
-        log_level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL).
-        output_dir: Optional output directory where results will be saved.
-                   If provided, logs will also be stored in this directory.
-    """
-    # Determine logs directory based on output directory
-    logs_dir = "logs"
-    if output_dir:
-        logs_dir = os.path.join(output_dir, "logs")
-    
-    # Set up structured logging
-    setup_logging(log_level=log_level, logs_dir=logs_dir)
-    
-    # Get the main logger
-    logger = get_logger("fade.main")
-    logger.info(f"Logging initialized with logs directory: {logs_dir}")
-
-
-def parse_arguments() -> argparse.Namespace:
-    """
-    Parse command-line arguments.
-    
-    Returns:
-        Parsed arguments.
-    """
-    parser = argparse.ArgumentParser(description="F.A.D.E: Fully Agentic Drug Engine")
-    
-    parser.add_argument(
-        "--query", "-q",
-        type=str,
-        help="Natural language query describing the drug discovery goal"
-    )
-    
-    parser.add_argument(
-        "--batch-file",
-        type=str,
-        help="Path to a file containing multiple queries (one per line)"
-    )
-    
-    parser.add_argument(
-        "--output-dir", "-o",
-        type=str,
-        default="results",
-        help="Directory where results will be saved"
-    )
-    
-    parser.add_argument(
-        "--log-level",
-        type=str,
-        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        default="INFO",
-        help="Logging level"
-    )
-    
-    parser.add_argument(
-        "--skip-structure-prediction",
-        action="store_true",
-        help="Skip the structure prediction step"
-    )
-    
-    parser.add_argument(
-        "--background",
-        action="store_true",
-        default=True,  # Default to running in background
-        help="Run the process in the background (default: True)"
-    )
-    
-    parser.add_argument(
-        "--foreground",
-        action="store_true",
-        help="Run the process in the foreground (overrides --background)"
-    )
-    
-    return parser.parse_args()
-
-
-def process_query(query: str, output_dir: Optional[str] = None, skip_structure_prediction: bool = False) -> Dict[str, Any]:
-    """
-    Process a natural language query through the F.A.D.E pipeline.
-    
-    Args:
-        query: Natural language query describing the drug discovery goal.
-        output_dir: Optional directory where results will be saved.
-        skip_structure_prediction: If True, skip the structure prediction step.
-        
-    Returns:
-        Dictionary containing the results.
-    """
-    # Get logger
-    logger = get_logger("fade.main")
-    
-    # Initialize summary logger if output directory is provided
-    summary_logger = None
-    if output_dir:
-        summary_logger = SummaryLogger(output_dir)
-        summary_logger.log_query(query)
-    
-    # Initialize the Target Selector agent
-    target_selector = TargetSelector()
-    
-    # Process the query with Target Selector
-    logger.info(f"Processing query with Target Selector: {query}")
-    target_selector_results = target_selector.process(query)
-    
-    # Log summary of target selector results
-    if summary_logger:
-        summary_logger.log_agent_result("target_selector", target_selector_results)
-    
-    # Initialize results dictionary
-    results = {
-        "target_selector": target_selector_results
-    }
-    
-    # Continue with Structure Predictor if not skipped
-    if not skip_structure_prediction:
-        # Initialize the Structure Predictor agent
-        structure_predictor = StructurePredictor()
-        
-        # Process results with Structure Predictor
-        logger.info("Processing with Structure Predictor")
-        structure_predictor_input = {
-            "sequences": target_selector_results.get("sequences", {}),
-            "job_configs": target_selector_results.get("config_files", {})
-        }
-        structure_predictor_results = structure_predictor.process(structure_predictor_input)
-        
-        # Add structure predictor results to the overall results
-        results["structure_predictor"] = structure_predictor_results
-        
-        # Log summary of structure predictor results
-        if summary_logger:
-            summary_logger.log_agent_result("structure_predictor", structure_predictor_results)
-
-        # Initialize the Molecule Generator agent
-        molecule_generator = MoleculeGenerator()
-
-        # Process results with Molecule Generator
-        logger.info("Processing with Molecule Generator")
-        molecule_generator_input = {
-            "prepared_structures": structure_predictor_results.get("prepared_structures", {}),
-            "binding_sites": structure_predictor_results.get("binding_sites", {}),
-            "parsed_query_data": target_selector_results.get("parsed_data", {}) # Pass parsed data for requirements
-        }
-        molecule_generator_results = molecule_generator.process(molecule_generator_input)
-
-        # Add molecule generator results to the overall results
-        results["molecule_generator"] = molecule_generator_results
-
-        # Log summary of molecule generator results
-        if summary_logger:
-            summary_logger.log_agent_result("molecule_generator", molecule_generator_results)
-    
-    # Save results if output directory is provided
-    if output_dir:
-        os.makedirs(output_dir, exist_ok=True)
-        results_path = os.path.join(output_dir, "results.json")
-        
-        with open(results_path, "w") as f:
-            json.dump(results, f, indent=2)
-        logger.info(f"Results saved to: {results_path}")
-        
-        # Log final summary
-        if summary_logger:
-            summary_logger.log_final_summary(results)
-    
-    return results
-
-
-def main() -> None:
-    """Main entry point."""
-    # Load environment variables from .env file
-    load_dotenv()
-    
-    # Parse command-line arguments
-    args = parse_arguments()
-    
-    # Check if we should run in the background
-    if args.background and not args.foreground:
-        # Generate a unique output directory if not provided
-        if not args.output_dir:
-            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            args.output_dir = f"results_{timestamp}"
-        
-        # Create output directory
-        os.makedirs(args.output_dir, exist_ok=True)
-        
-        # Create log file
-        log_file = os.path.join(args.output_dir, "fade.log")
-        
-        # Build command for subprocess
-        cmd = [
-            sys.executable, os.path.abspath(__file__),
-            "--query", args.query,
-            "--output-dir", args.output_dir,
-            "--log-level", args.log_level,
-            "--foreground"  # Force foreground mode to avoid recursion
-        ]
-        
-        if args.skip_structure_prediction:
-            cmd.append("--skip-structure-prediction")
-        
-        # Start the process in background
-        with open(log_file, "w") as f:
-            # Write header to log file
-            f.write(f"F.A.D.E Job started at {datetime.datetime.now()}\n")
-            f.write(f"Query: {args.query}\n")
-            f.write(f"Output directory: {args.output_dir}\n")
-            f.write(f"Skip structure prediction: {args.skip_structure_prediction}\n\n")
-            f.flush()
-            
-            # Start the process in background
-            process = subprocess.Popen(
-                cmd,
-                stdout=f,
-                stderr=subprocess.STDOUT,
-                close_fds=True
-            )
-        
-        # Create a job info file
-        job_info_file = os.path.join(args.output_dir, "job_info.txt")
-        with open(job_info_file, "w") as f:
-            f.write(f"Job ID: {process.pid}\n")
-            f.write(f"Started at: {datetime.datetime.now()}\n")
-            f.write(f"Query: {args.query}\n")
-            f.write(f"Output directory: {args.output_dir}\n")
-            f.write(f"Log file: {log_file}\n")
-            f.write(f"Skip structure prediction: {args.skip_structure_prediction}\n")
-        
-        # Create a basic status checker
-        status_script = os.path.join(args.output_dir, "check_status.py")
-        status_script_content = '''
-#!/usr/bin/env python3
-"""
-Simple status checker for F.A.D.E job
-"""
-
-import os
-import sys
-import time
 import json
-import subprocess
+from pathlib import Path
 
-# Get job info
-job_info_file = "job_info.txt"
-output_dir = os.path.dirname(os.path.abspath(__file__))
-log_file = os.path.join(output_dir, "fade.log")
-results_file = os.path.join(output_dir, "results.json")
+from fade.workflows.drug_discovery import run_drug_discovery_pipeline
+from fade.config import config
+from fade.utils import setup_logging, get_logger
 
-# Check if process is running
-with open(os.path.join(output_dir, job_info_file), "r") as f:
-    for line in f:
-        if line.startswith("Job ID:"):
-            pid = int(line.split(":", 1)[1].strip())
-            break
+logger = get_logger("main")
 
-def is_process_running(pid):
+
+def main():
+    """Main entry point for CLI usage."""
+    parser = argparse.ArgumentParser(
+        description="F.A.D.E - Fully Agentic Drug Engine (LangGraph Implementation)",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python main.py "Find inhibitors for KRAS G12C"
+  python main.py "Design molecules targeting EGFR T790M mutation"
+  python main.py "Create blood-brain barrier penetrant drugs for tau protein"
+        """
+    )
+    
+    parser.add_argument(
+        "query",
+        nargs="?",
+        default="Find inhibitors for KRAS G12C",
+        help="Natural language query describing the drug discovery task"
+    )
+    
+    parser.add_argument(
+        "--user-id",
+        help="Optional user identifier for tracking"
+    )
+    
+    parser.add_argument(
+        "--output-format",
+        choices=["text", "json"],
+        default="text",
+        help="Output format for results"
+    )
+    
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Enable verbose logging"
+    )
+    
+    parser.add_argument(
+        "--no-rich",
+        action="store_true",
+        help="Disable rich console output"
+    )
+    
+    args = parser.parse_args()
+    
+    # Set up logging
+    log_level = "DEBUG" if args.verbose else "INFO"
+    setup_logging(level=log_level, use_rich=not args.no_rich)
+    
+    # Validate configuration
     try:
-        # Cross-platform way to check if process is running
-        if os.name == "nt":  # Windows
-            return subprocess.call(["tasklist", "/FI", f"PID eq {pid}"], stdout=subprocess.DEVNULL) == 0
-        else:  # Unix
-            return os.path.exists(f"/proc/{pid}")
-    except Exception:
-        return False
-
-# Print status
-print(f"F.A.D.E Job Status Check - {time.ctime()}")
-print(f"Output directory: {output_dir}")
-
-if is_process_running(pid):
-    print(f"Status: RUNNING (PID: {pid})")
-    print("\nLast few log lines:")
-    try:
-        with open(log_file, "r") as f:
-            lines = f.readlines()
-            for line in lines[-10:]:
-                print(f"  {line.strip()}")
-    except Exception as e:
-        print(f"  Error reading log file: {e}")
-else:
-    if os.path.exists(results_file):
-        print("Status: COMPLETED")
-        print(f"Results file: {results_file}")
-        print(f"Results size: {os.path.getsize(results_file) / 1024:.1f} KB")
-    else:
-        print("Status: NOT RUNNING (possibly failed)")
-    
-    print("\nLast few log lines:")
-    try:
-        with open(log_file, "r") as f:
-            lines = f.readlines()
-            for line in lines[-10:]:
-                print(f"  {line.strip()}")
-    except Exception as e:
-        print(f"  Error reading log file: {e}")
-'''
-        
-        # Write the status script
-        with open(status_script, "w") as f:
-            f.write(status_script_content)
-        
-        # Make the status script executable
-        os.chmod(status_script, 0o755)
-        
-        # Print status message
-        print(f"F.A.D.E job started in background mode:")
-        print(f"  Job ID: {process.pid}")
-        print(f"  Output directory: {args.output_dir}")
-        print(f"  Log file: {log_file}")
-        print("\nTo check status:")
-        print(f"  1. Run the status script: python {status_script}")
-        print(f"  2. View log file: tail -f {log_file}")
-        print(f"  3. Use the job monitor: python monitor_jobs.py {args.output_dir}")
-        print("\nYour job is now running in the background. You can close this terminal if needed.")
-        
-        # Exit - the job is now running in the background
-        return
-    
-    # If running in foreground mode, continue with normal execution
-    # Set up logging with output directory integration
-    setup_logging_with_output_dir(args.log_level, args.output_dir)
-    
-    # Get logger
-    logger = get_logger("fade.main")
-    
-    # Process query or batch file
-    if args.query:
-        # Process a single query
-        logger.info(f"Processing query: {args.query}")
-        results = process_query(args.query, args.output_dir, args.skip_structure_prediction)
-        logger.info(f"Processing completed. Results saved to: {args.output_dir}")
-        
-    elif args.batch_file:
-        # Process multiple queries from a batch file
-        if not os.path.exists(args.batch_file):
-            logger.error(f"Batch file not found: {args.batch_file}")
-            sys.exit(1)
-            
-        logger.info(f"Processing batch file: {args.batch_file}")
-        
-        with open(args.batch_file, "r") as f:
-            queries = [line.strip() for line in f if line.strip() and not line.startswith("#")]
-            
-        for i, query in enumerate(queries):
-            query_output_dir = os.path.join(args.output_dir, f"query_{i+1}")
-            logger.info(f"Processing query {i+1}/{len(queries)}: {query}")
-            process_query(query, query_output_dir, args.skip_structure_prediction)
-            
-        logger.info(f"Batch processing completed. Results saved to: {args.output_dir}")
-        
-    else:
-        # No query or batch file provided
-        logger.error("No query or batch file provided. Use --query or --batch-file.")
+        config.validate()
+    except ValueError as e:
+        logger.error(f"Configuration error: {e}")
+        logger.info("Please check your .env file")
         sys.exit(1)
+    
+    # Run the LangGraph pipeline
+    logger.info(f"Starting F.A.D.E pipeline with LangGraph")
+    logger.info(f"Query: {args.query}")
+    
+    final_state = run_drug_discovery_pipeline(args.query, args.user_id)
+    
+    # Output results
+    if args.output_format == "json":
+        # Convert to JSON-serializable format
+        output = {
+            "run_id": final_state["run_id"],
+            "query": final_state["query"],
+            "status": "completed" if not final_state.get("error") else "failed",
+            "error": final_state.get("error"),
+            "current_step": final_state.get("current_step"),
+            "target": {
+                "name": final_state.get("target_info", {}).get("protein_name"),
+                "uniprot_id": final_state.get("target_info", {}).get("uniprot_id"),
+                "gene_name": final_state.get("target_info", {}).get("gene_name"),
+                "mutations": final_state.get("target_info", {}).get("mutations")
+            } if final_state.get("target_info") else None,
+            "known_compounds_count": len(final_state.get("known_compounds", [])),
+            "messages": [msg.content if hasattr(msg, 'content') else str(msg) 
+                        for msg in final_state.get("messages", [])]
+        }
+        print(json.dumps(output, indent=2, default=str))
+        
+    else:  # text output
+        print("\n" + "="*80)
+        print("F.A.D.E DRUG DISCOVERY RESULTS")
+        print("="*80)
+        
+        if final_state.get("error"):
+            print(f"\n❌ Pipeline Failed: {final_state['error']}")
+            print(f"   Step: {final_state.get('current_step', 'unknown')}")
+        
+        elif final_state.get("target_info"):
+            target = final_state["target_info"]
+            print(f"\n✓ Target Identified:")
+            print(f"  • Protein: {target.get('protein_name', 'Unknown')}")
+            print(f"  • UniProt ID: {target.get('uniprot_id', 'N/A')}")
+            print(f"  • Gene: {target.get('gene_name', 'N/A')}")
+            
+            if target.get("mutations"):
+                print(f"  • Mutations: {', '.join(target['mutations'])}")
+            
+            if target.get("sequence_length"):
+                print(f"  • Sequence Length: {target['sequence_length']} amino acids")
+            
+            if final_state.get("known_compounds"):
+                compounds = final_state["known_compounds"]
+                print(f"\n✓ Known Compounds: {len(compounds)}")
+                
+                # Show top 5 compounds
+                approved = [c for c in compounds if c.get("clinical_phase") == "Approved"]
+                if approved:
+                    print(f"  • Approved Drugs: {len(approved)}")
+                    for drug in approved[:3]:
+                        name = drug.get("name") or drug.get("compound_id")
+                        print(f"    - {name}")
+                
+            if target.get("existing_structures"):
+                structures = target["existing_structures"]
+                print(f"\n✓ Existing Structures: {len(structures)} PDB entries")
+                for struct in structures[:3]:
+                    print(f"  • {struct['pdb_id']}: {struct.get('title', 'N/A')[:60]}...")
+                    if struct.get("resolution"):
+                        print(f"    Resolution: {struct['resolution']} Å")
+            
+            # Show pocket information
+            if final_state.get("pockets"):
+                pockets = final_state["pockets"]
+                print(f"\n✓ Binding Pockets Detected: {len(pockets)}")
+                for pocket in pockets[:3]:
+                    print(f"  • {pocket['pocket_id']}:")
+                    print(f"    Druggability: {pocket.get('druggability_score', 0):.2f}")
+                    print(f"    Volume: {pocket.get('volume', 0):.1f} Ų")
+                    if pocket.get("description"):
+                        print(f"    Description: {pocket['description']}")
+            
+            if final_state.get("selected_pocket"):
+                pocket = final_state["selected_pocket"]
+                print(f"\n✓ Selected Target Pocket: {pocket['pocket_id']}")
+                if final_state.get("pocket_selection_rationale"):
+                    print(f"  Rationale: {final_state['pocket_selection_rationale']}")
+        
+        else:
+            print("\n⚠ No target information found")
+            print(f"Current step: {final_state.get('current_step', 'unknown')}")
+        
+        # Show workflow messages
+        if args.verbose and final_state.get("messages"):
+            print("\n" + "-"*40)
+            print("Workflow Messages:")
+            for msg in final_state["messages"]:
+                content = msg.content if hasattr(msg, 'content') else str(msg)
+                print(f"  • {content}")
+    
+    # Exit with appropriate code
+    sys.exit(0 if not final_state.get("error") else 1)
 
 
 if __name__ == "__main__":

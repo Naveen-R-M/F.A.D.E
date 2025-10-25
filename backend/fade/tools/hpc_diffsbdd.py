@@ -77,23 +77,26 @@ class HPCDiffSBDDClient:
             # Format residue list
             resi_list_str = " ".join(pocket_residues) if pocket_residues else ""
             
-            # Build DiffSBDD command using sbatch_diffsbdd_generate
+            # Build DiffSBDD command - create custom sbatch script
             output_file = f"generated_ligands_{job_id}.sdf"
             
-            diffsbdd_cmd = f"""
-cd {remote_dir}
-module use {self.module_path}
-module load diffsbdd
-
-sbatch_diffsbdd_generate \\
-    {job_id} \\
-    checkpoints/crossdocked_fullatom_cond.ckpt \\
-    --pdbfile {remote_pdb} \\
-    --resi_list {resi_list_str} \\
-    --outfile outputs/{output_file} \\
-    --n_samples {n_samples} \\
-    {"--sanitize" if sanitize else ""}
-"""
+            # Create a custom SLURM batch script with proper environment activation
+            batch_script = self._create_batch_script(
+                job_id=job_id,
+                remote_dir=remote_dir,
+                remote_pdb=remote_pdb,
+                pocket_residues=pocket_residues,
+                output_file=output_file,
+                n_samples=n_samples,
+                sanitize=sanitize
+            )
+            
+            # Upload the batch script
+            batch_script_path = f"{remote_dir}/run_diffsbdd.sh"
+            self._upload_batch_script(batch_script, batch_script_path)
+            
+            # Submit the job
+            diffsbdd_cmd = f"cd {remote_dir} && sbatch run_diffsbdd.sh"
             
             logger.info(f"Submitting DiffSBDD job to generate {n_samples} molecules...")
             logger.debug(f"Command: {diffsbdd_cmd}")
@@ -161,19 +164,53 @@ sbatch_diffsbdd_generate \\
             
             # If we have SLURM job ID, check job status
             if slurm_job_id:
+                # First try squeue (for running/pending jobs)
                 status_cmd = f"squeue -j {slurm_job_id} -h -o %T"
                 stdout, stderr, exit_code = self.ssh_client.execute_command(status_cmd)
                 
                 if exit_code == 0 and stdout.strip():
                     job_status = stdout.strip()
-                    logger.debug(f"Job {slurm_job_id} status: {job_status}")
+                    logger.info(f"Job {slurm_job_id} status: {job_status}")
                     
-                    if job_status in ["COMPLETED", "FAILED", "CANCELLED"]:
-                        if job_status != "COMPLETED":
-                            raise RuntimeError(f"DiffSBDD job {slurm_job_id} {job_status}")
+                    if job_status in ["PENDING", "RUNNING"]:
+                        # Job is still active, continue waiting
+                        logger.debug(f"Waiting for DiffSBDD job... ({int(time.time() - start_time)}s elapsed)")
+                        time.sleep(check_interval)
+                        continue
+                    elif job_status in ["COMPLETED", "FAILED", "CANCELLED", "TIMEOUT"]:
+                        logger.warning(f"Job {slurm_job_id} finished with status: {job_status}")
                         break
+                else:
+                    # Job not in squeue, check sacct for completed jobs
+                    logger.debug(f"Job {slurm_job_id} not in queue, checking sacct...")
+                    sacct_cmd = f"sacct -j {slurm_job_id} --format=JobID,State,ExitCode -n -P"
+                    stdout, stderr, exit_code = self.ssh_client.execute_command(sacct_cmd)
+                    
+                    if exit_code == 0 and stdout.strip():
+                        # Parse sacct output (format: JobID|State|ExitCode)
+                        lines = stdout.strip().split('\n')
+                        for line in lines:
+                            if '|' in line:
+                                parts = line.split('|')
+                                if len(parts) >= 2:
+                                    job_id_part = parts[0]
+                                    job_state = parts[1]
+                                    
+                                    # Only check the main job (not .batch or .extern)
+                                    if job_id_part == slurm_job_id:
+                                        logger.info(f"Job {slurm_job_id} completed with state: {job_state}")
+                                        
+                                        if job_state == "COMPLETED":
+                                            break
+                                        else:
+                                            # Job failed, get error logs
+                                            self._print_job_error_logs(remote_dir, slurm_job_id)
+                                            raise RuntimeError(f"DiffSBDD job {slurm_job_id} {job_state}")
+                        break
+                    else:
+                        # Can't find job info, continue waiting
+                        logger.debug(f"No job info found, continuing to wait... ({int(time.time() - start_time)}s elapsed)")
             
-            logger.debug(f"Waiting for DiffSBDD job... ({int(time.time() - start_time)}s elapsed)")
             time.sleep(check_interval)
         
         # Final check for output file
@@ -181,6 +218,9 @@ sbatch_diffsbdd_generate \\
         stdout, stderr, exit_code = self.ssh_client.execute_command(check_cmd)
         
         if exit_code != 0:
+            # Check error logs before failing
+            if slurm_job_id:
+                self._print_job_error_logs(remote_dir, slurm_job_id)
             raise TimeoutError(f"DiffSBDD job did not complete within {max_wait} seconds")
     
     def _download_and_parse_sdf(self, remote_dir: str, job_id: str, 
@@ -317,6 +357,157 @@ obabel {remote_sdf} -O {smiles_file} -h
             logger.error(f"Error converting to SMILES: {e}")
         
         return smiles_list
+    
+    def _create_batch_script(self, job_id: str, remote_dir: str, remote_pdb: str,
+                           pocket_residues: List[str], output_file: str,
+                           n_samples: int, sanitize: bool) -> str:
+        """
+        Create a SLURM batch script with proper environment activation.
+        
+        Args:
+            job_id: Job identifier
+            remote_dir: Remote working directory
+            remote_pdb: Path to PDB file on HPC
+            pocket_residues: List of pocket residues (can be empty)
+            output_file: Output filename
+            n_samples: Number of molecules to generate
+            sanitize: Whether to sanitize molecules
+            
+        Returns:
+            Batch script content as string
+        """
+        sanitize_flag = "--sanitize" if sanitize else ""
+        
+        # Path to DiffSBDD installation and checkpoint
+        diffsbdd_path = "/projects/SimBioSys/share/software/DiffSBDD"
+        checkpoint_path = f"{diffsbdd_path}/checkpoints/crossdocked_fullatom_cond.ckpt"
+        env_path = f"{diffsbdd_path}/env/"
+        
+        # Build residue list argument only if residues are provided
+        resi_list_arg = ""
+        if pocket_residues:
+            resi_list_str = " ".join(pocket_residues)
+            resi_list_arg = f"--resi_list {resi_list_str} \\"
+        
+        batch_script = f'''#!/bin/bash
+#SBATCH --job-name=diffsbdd_{job_id}
+#SBATCH --output={remote_dir}/slurm-%j.out
+#SBATCH --error={remote_dir}/slurm-%j.err
+#SBATCH --partition=short
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=16GB
+#SBATCH --time=02:00:00
+#SBATCH --gres=gpu:1
+
+echo "======================================================"
+echo "Starting DiffSBDD Job"
+echo "Job ID: $SLURM_JOB_ID"
+echo "Unique ID: {job_id}"
+echo "Output Directory: {remote_dir}"
+echo "Running on: $(hostname)"
+echo "======================================================"
+
+# Load module and activate environment
+module use {self.module_path}
+module load diffsbdd
+
+# Activate micromamba environment
+eval "$(micromamba shell hook --shell bash)"
+micromamba activate {env_path}
+
+echo "Environment activated"
+echo "Python: $(which python)"
+echo "PyTorch version: $(python -c 'import torch; print(torch.__version__)')"
+
+# Change to working directory
+cd {remote_dir}
+
+# Run DiffSBDD generation
+# Note: checkpoint is a positional argument and must come first
+echo "Running DiffSBDD..."
+python {diffsbdd_path}/generate_ligands.py \\
+    {checkpoint_path} \\
+    --pdbfile {remote_pdb} \\
+    {resi_list_arg}
+    --outfile outputs/{output_file} \\
+    --n_samples {n_samples} \\
+    {sanitize_flag}
+
+EXIT_CODE=$?
+
+echo "======================================================"
+echo "DiffSBDD Job Finished with Exit Code: $EXIT_CODE"
+echo "======================================================"
+
+exit $EXIT_CODE
+'''
+        
+        return batch_script
+    
+    def _upload_batch_script(self, script_content: str, remote_path: str):
+        """
+        Upload batch script to HPC.
+        
+        Args:
+            script_content: Content of the batch script
+            remote_path: Destination path on HPC
+        """
+        import tempfile
+        
+        # Convert Windows line endings (\r\n) to Unix line endings (\n)
+        script_content = script_content.replace('\r\n', '\n')
+        
+        # Create temporary file with script content
+        # Use newline='' to prevent Python from converting line endings
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.sh', delete=False, newline='') as f:
+            f.write(script_content)
+            temp_path = f.name
+        
+        try:
+            # Upload the script
+            if not self.ssh_client.upload_file(temp_path, remote_path):
+                raise RuntimeError("Failed to upload batch script")
+            
+            # Make it executable
+            self.ssh_client.execute_command(f"chmod +x {remote_path}")
+            
+            logger.debug(f"Uploaded batch script to {remote_path}")
+            
+        finally:
+            # Clean up temp file
+            import os
+            try:
+                os.unlink(temp_path)
+            except:
+                pass
+    
+    def _print_job_error_logs(self, remote_dir: str, slurm_job_id: str):
+        """
+        Print SLURM job error and output logs for debugging.
+        
+        Args:
+            remote_dir: Remote directory
+            slurm_job_id: SLURM job ID
+        """
+        # Check for slurm output file
+        slurm_out = f"{remote_dir}/slurm-{slurm_job_id}.out"
+        stdout, stderr, exit_code = self.ssh_client.execute_command(f"cat {slurm_out}")
+        
+        if exit_code == 0 and stdout:
+            logger.error(f"SLURM output for job {slurm_job_id}:")
+            logger.error(stdout[-2000:])  # Last 2000 chars
+        else:
+            logger.warning(f"No SLURM output file found at {slurm_out}")
+        
+        # Check for error file
+        slurm_err = f"{remote_dir}/slurm-{slurm_job_id}.err"
+        stdout, stderr, exit_code = self.ssh_client.execute_command(f"cat {slurm_err}")
+        
+        if exit_code == 0 and stdout:
+            logger.error(f"SLURM error for job {slurm_job_id}:")
+            logger.error(stdout[-2000:])
     
     def _format_residues_for_diffsbdd(self, pocket: Dict[str, Any]) -> List[str]:
         """

@@ -217,41 +217,25 @@ def _format_pocket_residues(pocket: Dict[str, Any]) -> List[str]:
     """
     Format pocket residues for DiffSBDD input.
     
+    For now, we return an empty list to let DiffSBDD use the whole protein.
+    This avoids chain/residue numbering issues.
+    
     Args:
         pocket: Pocket information
         
     Returns:
-        List of residue strings in format "CHAIN:RESNUM"
+        Empty list (DiffSBDD will use whole protein)
     """
-    formatted_residues = []
+    # DiffSBDD can work without specific residue list
+    # It will generate molecules for the whole protein
+    # This avoids KeyError issues with chain/residue numbering
+    logger.info(f"Using whole protein for molecule generation (pocket: {pocket.get('pocket_id')})")
     
-    # Try to get residues from pocket
-    if pocket.get("residues"):
-        for res in pocket["residues"][:10]:  # Limit to 10 residues
-            # Try different formats
-            import re
-            
-            # Format: GLY12 or G12
-            match = re.match(r'([A-Z]{1,3})(\d+)', res)
-            if match:
-                res_num = match.group(2)
-                formatted_residues.append(f"A:{res_num}")
+    if pocket.get("center"):
+        center = pocket["center"]
+        logger.info(f"Pocket center at: ({center[0]:.2f}, {center[1]:.2f}, {center[2]:.2f})")
     
-    # For KRAS G12C, use known key residues if none found
-    if not formatted_residues:
-        logger.info("Using default KRAS G12C binding site residues")
-        formatted_residues = [
-            "A:12",   # G12C mutation site
-            "A:13",   # Adjacent
-            "A:60",   # Switch II region
-            "A:61",   # Q61
-            "A:62",   # E62
-            "A:116",  # K116
-            "A:117",  # K117
-        ]
-    
-    logger.debug(f"Using pocket residues: {formatted_residues}")
-    return formatted_residues
+    return []
 
 
 def _apply_simple_filters(mol: Dict[str, Any]) -> Dict[str, Any]:

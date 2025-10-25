@@ -18,13 +18,15 @@ const MODEL_GRADIENT: Record<string, string> = {
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 interface GatewayResponse {
-    type: 'chat' | 'job' | 'error';
+    type: 'chat' | 'job' | 'consent_required' | 'error';
     message?: string;
     job_id?: string;
     status?: string;
     reasoning?: string;
     confidence?: number;
     error?: string;
+    call_to_action?: string;
+    job_preview?: any;
 }
 
 export default function ChatUI() {
@@ -32,6 +34,7 @@ export default function ChatUI() {
     const { addJob, updateJob } = useJobs();
     const { conversations, active, activeId, createConversation, appendMessage } = useChat();
     const sessionId = getSessionId();
+    const [pendingJobQuery, setPendingJobQuery] = useState<string | null>(null);
 
     // Initialize conversation
     const bootRef = useRef(false);
@@ -39,9 +42,9 @@ export default function ChatUI() {
         if (bootRef.current) return;
         if (conversations.length === 0) {
             bootRef.current = true;
-            createConversation({ 
-                model, 
-                greeting: 'Hi! I\'m F.A.D.E, your AI drug discovery assistant. Ask me about proteins, diseases, or describe the drug you\'d like to design!' 
+            createConversation({
+                model,
+                greeting: 'Hi! I\'m F.A.D.E, your AI drug discovery assistant. Ask me about proteins, diseases, or describe the drug you\'d like to design!'
             });
         }
     }, [conversations.length, createConversation, model]);
@@ -58,17 +61,18 @@ export default function ChatUI() {
     function handleNewConversation() {
         setInput('');
         setIsThinking(false);
-        createConversation({ 
-            model, 
-            greeting: 'Hi! I\'m F.A.D.E, your AI drug discovery assistant. What can I help you discover today?' 
+        setPendingJobQuery(null);
+        createConversation({
+            model,
+            greeting: 'Hi! I\'m F.A.D.E, your AI drug discovery assistant. What can I help you discover today?'
         });
     }
 
-    async function handleGatewayRequest(query: string) {
+    async function handleGatewayRequest(query: string, withConsent: boolean = false) {
         if (!BACKEND_URL) {
-            appendMessage({ 
-                role: 'assistant', 
-                content: '❌ Gateway not configured. Please set NEXT_PUBLIC_BACKEND_URL in your environment.' 
+            appendMessage({
+                role: 'assistant',
+                content: '❌ Backend not configured. Please set NEXT_PUBLIC_BACKEND_URL in your environment.'
             });
             return;
         }
@@ -76,68 +80,103 @@ export default function ChatUI() {
         const requestPayload = {
             id: crypto.randomUUID(),
             query: query,
-            model: model,
-            current_time: new Date().toISOString(),
-            user_id: sessionId
+            user_id: sessionId,
+            consent_given: withConsent
         };
 
         try {
-            console.log('📤 Sending to gateway:', requestPayload);
+            console.log('📤 Sending to unified API:', requestPayload);
 
-            const response = await fetch(`${BACKEND_URL.replace(/\/$/, '')}/jobs`, {
+            // Use the NEW unified endpoint
+            const response = await fetch(`${BACKEND_URL.replace(/\/$/, '')}/api/query`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(requestPayload),
             });
 
             if (!response.ok) {
-                throw new Error(`Gateway error: ${response.status} ${response.statusText}`);
+                const errorText = await response.text();
+                throw new Error(`API error: ${response.status} ${response.statusText} - ${errorText}`);
             }
 
             const result: GatewayResponse = await response.json();
-            console.log('📥 Gateway response:', result);
+            console.log('📥 API response:', result);
 
             if (result.type === 'chat') {
                 // Display chat response directly
                 let message = result.message || 'I received your question but couldn\'t generate a response.';
-                
+
                 // Add confidence indicator if available
                 if (result.confidence && result.confidence < 0.8) {
                     message += `\n\n*Note: I'm ${Math.round(result.confidence * 100)}% confident about this response.*`;
                 }
 
-                appendMessage({ 
-                    role: 'assistant', 
-                    content: message 
+                appendMessage({
+                    role: 'assistant',
+                    content: message
                 });
 
+            } else if (result.type === 'consent_required') {
+                // Handle consent request for job submission
+                let consentMessage = result.message || 'I can help with that drug discovery task.';
+                consentMessage += '\n\n' + (result.call_to_action || 'Would you like me to submit this job?');
+
+                if (result.job_preview) {
+                    consentMessage += '\n\n**Job Details:**';
+                    if (result.job_preview.estimated_time) {
+                        consentMessage += `\n• Estimated time: ${result.job_preview.estimated_time}`;
+                    }
+                    if (result.job_preview.computational_resources) {
+                        consentMessage += `\n• Resources: ${result.job_preview.computational_resources}`;
+                    }
+                    if (result.job_preview.pipeline_stages && Array.isArray(result.job_preview.pipeline_stages)) {
+                        consentMessage += '\n\n**Pipeline Stages:**';
+                        result.job_preview.pipeline_stages.forEach((stage: string) => {
+                            consentMessage += `\n• ${stage}`;
+                        });
+                    }
+                }
+
+                consentMessage += '\n\nReply with "yes" to proceed or ask me something else.';
+
+                appendMessage({
+                    role: 'assistant',
+                    content: consentMessage
+                });
+
+                // Store the query for potential resubmission with consent
+                setPendingJobQuery(query);
+
             } else if (result.type === 'job') {
-                // Handle job submission
+                // Handle job submission confirmation
                 const jobId = result.job_id!;
                 const jobData = {
-                    ...requestPayload,
                     id: jobId,
-                    status: result.status as any || 'queued'
+                    query: query,
+                    status: result.status || 'submitted',
+                    user_id: sessionId,
+                    model: model,
+                    current_time: new Date().toISOString()
                 };
 
                 // Add to job queue
-                addJob(jobData);
+                addJob(jobData as any);
 
                 // Show job confirmation in chat
                 let jobMessage = `🚀 **Drug Discovery Pipeline Started!**\n\n`;
                 jobMessage += `**Job ID:** ${jobId.slice(0, 8)}...\n`;
                 jobMessage += `**Status:** ${result.status}\n`;
                 jobMessage += `**Query:** "${query}"\n\n`;
-                jobMessage += `Your request has been submitted to the F.A.D.E pipeline. `;
-                jobMessage += `You can monitor progress in the "In Progress" tab.\n\n`;
-                
-                if (result.confidence && result.confidence < 0.9) {
-                    jobMessage += `*Classification confidence: ${Math.round(result.confidence * 100)}%*`;
+
+                if (result.message) {
+                    jobMessage += result.message + '\n\n';
                 }
 
-                appendMessage({ 
-                    role: 'assistant', 
-                    content: jobMessage 
+                jobMessage += `You can monitor progress in the "In Progress" tab.`;
+
+                appendMessage({
+                    role: 'assistant',
+                    content: jobMessage
                 });
 
                 // Start monitoring job status
@@ -145,17 +184,24 @@ export default function ChatUI() {
 
             } else if (result.type === 'error') {
                 // Handle errors
-                appendMessage({ 
-                    role: 'assistant', 
-                    content: `❌ Sorry, I encountered an error: ${result.message || result.error || 'Unknown error'}` 
+                appendMessage({
+                    role: 'assistant',
+                    content: `❌ Sorry, I encountered an error: ${result.message || result.error || 'Unknown error'}`
+                });
+            } else {
+                // Unknown response type
+                console.warn('Unknown response type:', result);
+                appendMessage({
+                    role: 'assistant',
+                    content: `I received an unexpected response. Please try again or rephrase your question.`
                 });
             }
 
         } catch (error) {
-            console.error('❌ Gateway request failed:', error);
-            appendMessage({ 
-                role: 'assistant', 
-                content: `❌ Sorry, I couldn't connect to the gateway: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.` 
+            console.error('❌ Request failed:', error);
+            appendMessage({
+                role: 'assistant',
+                content: `❌ Connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`
             });
         }
     }
@@ -164,7 +210,7 @@ export default function ChatUI() {
         // Monitor job status and update chat when completed
         const checkStatus = async () => {
             try {
-                const response = await fetch(`${BACKEND_URL}/jobs/${jobId}/status`);
+                const response = await fetch(`${BACKEND_URL}/api/jobs/${jobId}/status`);
                 if (response.ok) {
                     const status = await response.json();
                     updateJob(jobId, { status: status.status, error: status.error });
@@ -176,7 +222,7 @@ export default function ChatUI() {
                         });
                     } else if (status.status === 'failed') {
                         appendMessage({
-                            role: 'assistant', 
+                            role: 'assistant',
                             content: `❌ **Pipeline Failed**\n\nJob ${jobId.slice(0, 8)}... encountered an error: ${status.error || 'Unknown error'}`
                         });
                     } else if (status.status === 'running') {
@@ -197,13 +243,28 @@ export default function ChatUI() {
         const text = input.trim();
         if (!text || !active || isThinking) return;
 
+        // Check if this is a consent response
+        const isConsentResponse = pendingJobQuery && 
+            (text.toLowerCase() === 'yes' || 
+             text.toLowerCase() === 'y' || 
+             text.toLowerCase() === 'proceed' ||
+             text.toLowerCase() === 'go ahead' ||
+             text.toLowerCase() === 'submit');
+
         // Add user message
         appendMessage({ role: 'user', content: text });
         setInput('');
         setIsThinking(true);
 
-        // Send to gateway
-        await handleGatewayRequest(text);
+        if (isConsentResponse && pendingJobQuery) {
+            // Resubmit the pending job with consent
+            await handleGatewayRequest(pendingJobQuery, true);
+            setPendingJobQuery(null);
+        } else {
+            // Normal query
+            await handleGatewayRequest(text);
+        }
+        
         setIsThinking(false);
     }
 
@@ -248,8 +309,8 @@ export default function ChatUI() {
 
             {/* Chat Panel */}
             <div className="mt-8 w-full max-w-3xl">
-                <div 
-                    ref={listRef} 
+                <div
+                    ref={listRef}
                     className="h-[44vh] md:h-[40vh] overflow-y-auto rounded-2xl border border-white/10 bg-white/5 p-4"
                 >
                     <div className="space-y-3">
@@ -288,28 +349,28 @@ export default function ChatUI() {
 
                 {/* Enhanced Quick Actions */}
                 <div className="mt-4 space-y-2">
-                    <QuickActionButton 
+                    <QuickActionButton
                         onClick={() => onQuickAction('What is F.A.D.E and how does it work?')}
                         disabled={isThinking}
                     >
                         💡 What is F.A.D.E and how does it work?
                     </QuickActionButton>
-                    
-                    <QuickActionButton 
+
+                    <QuickActionButton
                         onClick={() => onQuickAction('What is KRAS and why is it important in cancer?')}
                         disabled={isThinking}
                     >
                         🧬 What is KRAS and why is it important in cancer?
                     </QuickActionButton>
-                    
-                    <QuickActionButton 
+
+                    <QuickActionButton
                         onClick={() => onQuickAction('Find EGFR inhibitors for lung cancer with oral bioavailability')}
                         disabled={isThinking}
                     >
                         🎯 Find EGFR inhibitors for lung cancer (oral)
                     </QuickActionButton>
-                    
-                    <QuickActionButton 
+
+                    <QuickActionButton
                         onClick={() => onQuickAction('Design KRAS G12C inhibitors with brain penetration for pancreatic cancer')}
                         disabled={isThinking}
                     >
@@ -356,13 +417,13 @@ function NewConversationBar({
 function Bubble({ role, text }: { role: Role; text: string }) {
     const isUser = role === 'user';
     const isMarkdown = text.includes('**') || text.includes('\n');
-    
+
     return (
         <div className={cn('flex w-full', isUser ? 'justify-end' : 'justify-start')}>
             <div className={cn(
                 'max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed',
-                isUser 
-                    ? 'bg-blue-500 text-white' 
+                isUser
+                    ? 'bg-blue-500 text-white'
                     : 'bg-white/7 text-white border border-white/10'
             )}>
                 {isMarkdown ? (
@@ -378,7 +439,7 @@ function Bubble({ role, text }: { role: Role; text: string }) {
 function MarkdownText({ text }: { text: string }) {
     // Simple markdown parsing for **bold** and line breaks
     const parts = text.split(/(\*\*[^*]+\*\*)/g);
-    
+
     return (
         <div className="space-y-2">
             {parts.map((part, index) => {
@@ -415,14 +476,14 @@ function AssistantTyping() {
     );
 }
 
-function QuickActionButton({ 
-    children, 
-    onClick, 
-    disabled 
-}: { 
-    children: React.ReactNode; 
-    onClick: () => void; 
-    disabled?: boolean; 
+function QuickActionButton({
+    children,
+    onClick,
+    disabled
+}: {
+    children: React.ReactNode;
+    onClick: () => void;
+    disabled?: boolean;
 }) {
     return (
         <button

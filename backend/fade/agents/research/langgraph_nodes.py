@@ -74,15 +74,27 @@ def target_research_node(state: DrugDiscoveryState) -> Dict[str, Any]:
         known_compounds = _search_known_compounds(chembl_client, target_info["uniprot_id"])
         logger.info(f"Found {len(known_compounds)} known compounds")
     
-    # Check for existing structures
+    # Check for existing structures with enhanced ligand information
     existing_structures = []
     if target_info.get("uniprot_id"):
         rcsb_client = get_rcsb_client()
+        # Use the enhanced search that includes ligand information
         existing_structures = rcsb_client.search_by_uniprot(
             target_info["uniprot_id"],
-            limit=5
+            limit=10,  # Get more initially for better filtering
+            with_ligands=True  # Enable ligand information retrieval
         )
         logger.info(f"Found {len(existing_structures)} existing PDB structures")
+        
+        # Log structures with drug-like ligands
+        drug_like_count = sum(1 for s in existing_structures if s.get("has_drug_like_ligand"))
+        if drug_like_count > 0:
+            logger.info(f"  {drug_like_count} structures have drug-like ligands")
+            for s in existing_structures:
+                if s.get("has_drug_like_ligand"):
+                    ligands = s.get("ligands", [])
+                    ligand_names = [l.get("id") for l in ligands if l.get("molecular_weight", 0) > 150]
+                    logger.debug(f"  {s['pdb_id']}: {', '.join(ligand_names)}")
     
     # Add message to history
     message = f"Identified target: {target_info.get('protein_name')} ({target_info.get('uniprot_id')})"
@@ -91,9 +103,11 @@ def target_research_node(state: DrugDiscoveryState) -> Dict[str, Any]:
     if existing_structures:
         message += f"\nFound {len(existing_structures)} existing structures"
     
-    # Store existing structures for structure module to use
+    # Store existing structures with ligand info for structure module to use
     if existing_structures:
         target_info["existing_structures"] = existing_structures
+        # Also store known compounds for cross-reference
+        target_info["known_compounds"] = known_compounds
     
     return {
         "target_info": target_info,

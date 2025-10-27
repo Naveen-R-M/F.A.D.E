@@ -32,7 +32,7 @@ class RCSBClient:
         self.timeout = timeout
         self.session = httpx.Client(timeout=timeout)
         
-    def search_by_uniprot(self, uniprot_id: str, limit: int = 10) -> List[Dict[str, Any]]:
+    def search_by_uniprot(self, uniprot_id: str, limit: int = 10, with_ligands: bool = False) -> List[Dict[str, Any]]:
         """
         Search for PDB structures by UniProt ID.
         
@@ -86,6 +86,13 @@ class RCSBClient:
             for pdb_id in pdb_ids[:limit]:
                 structure_info = self.get_structure_info(pdb_id)
                 if structure_info:
+                    # Optionally add detailed ligand information
+                    if with_ligands:
+                        ligand_info = self.get_structure_ligands(pdb_id)
+                        structure_info["ligands"] = ligand_info
+                        structure_info["has_drug_like_ligand"] = any(
+                            self._is_potentially_drug_like(lig) for lig in ligand_info
+                        )
                     structures.append(structure_info)
             
             logger.info(f"Found {len(structures)} structures for {uniprot_id}")
@@ -238,6 +245,203 @@ class RCSBClient:
             "ligands": ligands,
             "download_url": f"https://files.rcsb.org/download/{pdb_id.upper()}.pdb"
         }
+    
+    def get_structure_ligands(self, pdb_id: str) -> List[Dict[str, Any]]:
+        """
+        Get detailed ligand information for a PDB structure.
+        
+        Args:
+            pdb_id: 4-character PDB ID
+            
+        Returns:
+            List of ligand information dictionaries
+        """
+        try:
+            logger.debug(f"Fetching ligand information for {pdb_id}")
+            
+            # Get chemical component information
+            chem_comp_url = f"{self.data_url}/nonpolymer_entity/{pdb_id.upper()}"
+            response = self.session.get(chem_comp_url)
+            
+            if response.status_code == 404:
+                logger.debug(f"No ligand data found for {pdb_id}")
+                return []
+            
+            ligands = []
+            if response.status_code == 200:
+                nonpolymer_data = response.json()
+                
+                for entity in nonpolymer_data:
+                    comp_info = entity.get("rcsb_nonpolymer_entity", {})
+                    comp_id = comp_info.get("comp_id", "")
+                    
+                    if not comp_id:
+                        continue
+                    
+                    # Get detailed chemical component info
+                    chem_detail = self._get_chemical_component_details(comp_id)
+                    
+                    ligand_data = {
+                        "id": comp_id,
+                        "name": comp_info.get("pdbx_description", "Unknown"),
+                        "molecular_weight": self._safe_float(comp_info.get("formula_weight")),
+                        "formula": comp_info.get("formula"),
+                        "heavy_atom_count": self._count_heavy_atoms(comp_info.get("formula", "")),
+                        "type": chem_detail.get("type", "UNKNOWN"),
+                        "smiles": chem_detail.get("smiles"),
+                        "inchi": chem_detail.get("inchi"),
+                    }
+                    
+                    ligands.append(ligand_data)
+                    
+            logger.debug(f"Found {len(ligands)} ligands in {pdb_id}")
+            return ligands
+            
+        except Exception as e:
+            logger.error(f"Error fetching ligands for {pdb_id}: {e}")
+            return []
+    
+    def _safe_float(self, value) -> float:
+        """
+        Safely convert a value to float, handling None, lists, and strings.
+        
+        Args:
+            value: Value to convert
+            
+        Returns:
+            Float value or 0 if conversion fails
+        """
+        if value is None:
+            return 0
+        if isinstance(value, list):
+            return float(value[0]) if value else 0
+        if isinstance(value, str):
+            try:
+                return float(value)
+            except ValueError:
+                return 0
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return 0
+    
+    def _get_chemical_component_details(self, comp_id: str) -> Dict[str, Any]:
+        """
+        Get detailed chemical component information.
+        
+        Args:
+            comp_id: Chemical component ID (3-letter code)
+            
+        Returns:
+            Dictionary with chemical details
+        """
+        try:
+            # Try to get from RCSB chemical component dictionary
+            chem_comp_url = f"https://files.rcsb.org/ligands/view/{comp_id}.json"
+            response = self.session.get(chem_comp_url, timeout=5)
+            
+            if response.status_code == 200:
+                data = response.json()
+                return {
+                    "type": data.get("type", "UNKNOWN"),
+                    "smiles": data.get("pdbx_smiles", {}).get("canonical"),
+                    "inchi": data.get("pdbx_inchi", {}).get("inchi"),
+                }
+        except:
+            pass
+        
+        return {"type": "UNKNOWN"}
+    
+    def _count_heavy_atoms(self, formula: str) -> int:
+        """
+        Count heavy atoms (non-hydrogen) from chemical formula.
+        
+        Args:
+            formula: Chemical formula string
+            
+        Returns:
+            Number of heavy atoms
+        """
+        if not formula:
+            return 0
+        
+        # Simple parser for chemical formulas
+        import re
+        
+        # Remove hydrogen atoms
+        formula_no_h = re.sub(r'H\d*', '', formula)
+        
+        # Count remaining atoms
+        atom_pattern = r'([A-Z][a-z]?)(\d*)'
+        matches = re.findall(atom_pattern, formula_no_h)
+        
+        count = 0
+        for element, number in matches:
+            if number:
+                count += int(number)
+            else:
+                count += 1
+        
+        return count
+    
+    def _is_potentially_drug_like(self, ligand: Dict[str, Any]) -> bool:
+        """
+        Quick check if a ligand is potentially drug-like.
+        
+        Args:
+            ligand: Ligand information dictionary
+            
+        Returns:
+            True if potentially drug-like
+        """
+        # Quick checks without importing the full filter module
+        mw = ligand.get("molecular_weight", 0)
+        
+        # Handle case where molecular_weight might be a list or None
+        if isinstance(mw, list):
+            mw = mw[0] if mw else 0
+        elif mw is None:
+            mw = 0
+        
+        ligand_id = ligand.get("id", "").upper()
+        
+        # Check molecular weight range
+        if not (150 < mw < 800):
+            return False
+        
+        # Exclude common artifacts
+        artifacts = {'HOH', 'SO4', 'PO4', 'GOL', 'EDO', 'PEG', 'CL', 'NA', 'K', 'MG', 'CA', 'ZN'}
+        if ligand_id in artifacts:
+            return False
+        
+        # Exclude nucleotides
+        nucleotides = {'ATP', 'ADP', 'AMP', 'GTP', 'GDP', 'GMP'}
+        if ligand_id in nucleotides:
+            return False
+        
+        return True
+    
+    def search_by_uniprot_with_ligands(self, uniprot_id: str, limit: int = 10) -> List[Dict[str, Any]]:
+        """
+        Search for PDB structures with drug-like ligands by UniProt ID.
+        
+        This is a convenience method that combines search with ligand filtering.
+        
+        Args:
+            uniprot_id: UniProt accession ID
+            limit: Maximum number of structures to return
+            
+        Returns:
+            List of PDB entries with ligand information
+        """
+        # Get structures with ligand information
+        structures = self.search_by_uniprot(uniprot_id, limit=limit * 2, with_ligands=True)  # Get more initially
+        
+        # Filter to only those with drug-like ligands
+        filtered = [s for s in structures if s.get("has_drug_like_ligand")]
+        
+        logger.info(f"Found {len(filtered)} structures with drug-like ligands for {uniprot_id}")
+        return filtered[:limit]  # Return up to limit
     
     def download_structure(self, pdb_id: str, output_path: str = None) -> Optional[str]:
         """

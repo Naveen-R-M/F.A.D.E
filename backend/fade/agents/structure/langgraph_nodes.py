@@ -17,7 +17,7 @@ from fade.state.langgraph_state import DrugDiscoveryState
 from fade.tools import get_rcsb_client, get_boltz2_client
 from fade.tools.alphafold_api import get_alphafold_client
 from fade.config import config
-from fade.utils import get_logger
+from fade.utils import get_logger, select_best_structure
 
 logger = get_logger("nodes.structure")
 
@@ -61,7 +61,8 @@ def structure_resolver_node(state: DrugDiscoveryState) -> Dict[str, Any]:
     # Option 1: Check existing PDB structures
     existing_structures = target_info.get("existing_structures", [])
     if existing_structures:
-        best_structure = _select_best_pdb(existing_structures)
+        # Pass target_info for enhanced selection with mutations and known compounds
+        best_structure = _select_best_pdb(existing_structures, target_info)
         if best_structure:
             pdb_content = _download_pdb(best_structure["pdb_id"])
             if pdb_content:
@@ -234,12 +235,13 @@ def structure_wait_node(state: DrugDiscoveryState) -> Dict[str, Any]:
     }
 
 
-def _select_best_pdb(structures: list) -> Optional[Dict[str, Any]]:
+def _select_best_pdb(structures: list, target_info: Optional[Dict] = None) -> Optional[Dict[str, Any]]:
     """
-    Select the best PDB structure based on resolution and ligand presence.
+    Select the best PDB structure using enhanced ligand-aware selection.
     
     Args:
-        structures: List of PDB structures
+        structures: List of PDB structures with ligand information
+        target_info: Optional target information including mutations and known compounds
         
     Returns:
         Best structure or None
@@ -247,21 +249,25 @@ def _select_best_pdb(structures: list) -> Optional[Dict[str, Any]]:
     if not structures:
         return None
     
-    # Filter for X-ray structures with good resolution
-    xray_structures = [
-        s for s in structures 
-        if s.get("method") == "X-RAY DIFFRACTION" and s.get("resolution") is not None
-    ]
+    # Extract mutations and known compounds from target info if available
+    mutations = target_info.get("mutations", []) if target_info else []
+    known_compounds = target_info.get("known_compounds", []) if target_info else []
     
-    if xray_structures:
-        # Prefer structures with ligands, then by resolution
-        xray_structures.sort(
-            key=lambda x: (not x.get("has_ligand", False), x.get("resolution", 999))
-        )
-        return xray_structures[0]
+    # Use the enhanced selection function from utils
+    best = select_best_structure(
+        structures,
+        target_mutations=mutations,
+        known_compounds=known_compounds,
+        fallback_to_any=True  # Allow fallback to non-drug structures if needed
+    )
     
-    # Fall back to any structure
-    return structures[0]
+    if best:
+        logger.info(f"Selected PDB structure: {best.get('pdb_id')} (score: {best.get('quality_score', 0):.1f})")
+        if best.get('drug_like_ligands'):
+            ligand_names = [l.get('name', l.get('id', 'Unknown')) for l in best['drug_like_ligands']]
+            logger.info(f"  Contains drug-like ligands: {', '.join(ligand_names)}")
+    
+    return best
 
 
 def _download_pdb(pdb_id: str) -> Optional[str]:

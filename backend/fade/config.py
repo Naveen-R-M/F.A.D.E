@@ -82,6 +82,30 @@ class Config:
     SLURM_PARTITION = os.getenv("SLURM_PARTITION", "default")
     SLURM_ACCOUNT = os.getenv("SLURM_ACCOUNT")
     
+    # PDB Structure Selection Criteria
+    PDB_MIN_LIGAND_MW = 150  # Minimum molecular weight for drug-like ligands
+    PDB_MAX_LIGAND_MW = 800  # Maximum molecular weight for drug-like ligands
+    PDB_MIN_HEAVY_ATOMS = 10  # Minimum number of heavy atoms
+    PDB_CRYSTALLIZATION_ARTIFACTS = {
+        'HOH', 'H2O', 'WAT',  # Water
+        'SO4', 'PO4', 'SO3', 'PO3',  # Common ions
+        'GOL', 'EDO', 'PEG', 'PGE', 'P6G',  # Solvents/cryoprotectants
+        'ACE', 'ACT', 'NH2', 'NME',  # Capping groups
+        'CL', 'BR', 'IOD', 'F',  # Halides
+        'NA', 'K', 'LI', 'RB', 'CS',  # Alkali metals
+        'MG', 'CA', 'SR', 'BA',  # Alkaline earth metals
+        'ZN', 'FE', 'MN', 'CO', 'NI', 'CU',  # Transition metals
+        'CD', 'HG', 'PB',  # Heavy metals
+        'NO3', 'CO3', 'HCO',  # Other common ions
+        'DMS', 'MSO', 'EOH', 'IPA',  # Organic solvents
+        'FMT', 'ACN', 'CCN',  # Small organics
+        'SUL', 'TAR', 'CIT', 'MAL',  # Organic acids
+        'TRS', 'TRI', 'BIS', 'MES', 'HEP',  # Buffers
+    }
+    PDB_NUCLEOTIDES = {'ATP', 'ADP', 'AMP', 'GTP', 'GDP', 'GMP', 'CTP', 'CDP', 'CMP', 'UTP', 'UDP', 'UMP'}
+    PDB_PREFER_RECENT_YEARS = 5  # Prefer structures from last 5 years
+    PDB_MAX_RESOLUTION = 3.0  # Maximum resolution in Angstroms
+    
     @classmethod
     def get_api_headers(cls, api_name: str) -> Dict[str, str]:
         """Get headers for API requests."""

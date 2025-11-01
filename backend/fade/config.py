@@ -30,14 +30,13 @@ class Config:
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
     ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
     GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-    AI_MODEL = os.getenv("AI_MODEL", "gpt-4")
+    AI_MODEL = os.getenv("AI_MODEL")  # NO DEFAULT - Must be set
     AI_API_BASE = os.getenv("AI_API_BASE")  # For local models like DeepSeek
     
     # Protein Database APIs
     UNIPROT_API_URL = "https://rest.uniprot.org/uniprotkb"
     RCSB_API_URL = "https://data.rcsb.org/graphql"
     ALPHAFOLD_API_URL = "https://alphafold.ebi.ac.uk/api"
-    CHEMBL_API_URL = "https://www.ebi.ac.uk/chembl/api/data"
     
     # Boltz2 Configuration
     BOLTZ2_SERVER_URL = os.getenv("BOLTZ2_SERVER_URL", "http://localhost:8080")
@@ -56,6 +55,12 @@ class Config:
     MAX_MOLECULES_TO_GENERATE = int(os.getenv("MAX_MOLECULES_TO_GENERATE", "1000"))
     MAX_MOLECULES_TO_SCREEN = int(os.getenv("MAX_MOLECULES_TO_SCREEN", "100"))
     MAX_POCKETS_TO_ANALYZE = int(os.getenv("MAX_POCKETS_TO_ANALYZE", "5"))
+    
+    # Consensus Pocket Detection
+    CONSENSUS_GRID_SIZE = float(os.getenv("CONSENSUS_GRID_SIZE", "5.0"))  # Angstroms
+    CONSENSUS_MIN_AGREEMENT = int(os.getenv("CONSENSUS_MIN_AGREEMENT", "2"))
+    USE_CONSENSUS_FOR_ALPHAFOLD = os.getenv("USE_CONSENSUS_FOR_ALPHAFOLD", "true").lower() == "true"
+    USE_CONSENSUS_FOR_BOLTZ2 = os.getenv("USE_CONSENSUS_FOR_BOLTZ2", "true").lower() == "true"
     
     # Filtering Thresholds
     MAX_MOLECULAR_WEIGHT = float(os.getenv("MAX_MOLECULAR_WEIGHT", "500"))
@@ -106,6 +111,18 @@ class Config:
     PDB_PREFER_RECENT_YEARS = 5  # Prefer structures from last 5 years
     PDB_MAX_RESOLUTION = 3.0  # Maximum resolution in Angstroms
     
+    # Boltz2 Structure Prediction Configuration
+    BOLTZ2_MODULE_VERSION = "2"  # Module version on HPC
+    BOLTZ2_MAX_WAIT_TIME = 3600  # Maximum wait time in seconds (1 hour)
+    BOLTZ2_POLL_INTERVAL = 30  # Polling interval in seconds
+    BOLTZ2_GPU_PARTITION = os.getenv("BOLTZ2_PARTITION", "gpu-short")  # HPC partition (can override with env var)
+    BOLTZ2_SLURM_ACCOUNT = os.getenv("SLURM_ACCOUNT")  # SLURM account to use (optional)
+    BOLTZ2_USE_CPU = os.getenv("BOLTZ2_USE_CPU", "false").lower() == "true"  # Use CPU instead of GPU
+    BOLTZ2_CONFIDENCE_THRESHOLD = 70.0  # Minimum confidence score (pLDDT)
+    BOLTZ2_USE_MSA = True  # Whether to use Multiple Sequence Alignment
+    BOLTZ2_NUM_MODELS = 1  # Number of models to generate
+    BOLTZ_CACHE_DIR = os.getenv("BOLTZ_CACHE_DIR", None)
+    
     @classmethod
     def get_api_headers(cls, api_name: str) -> Dict[str, str]:
         """Get headers for API requests."""
@@ -126,9 +143,11 @@ class Config:
         
         # Handle local models like DeepSeek
         if cls.AI_API_BASE:
+            if not cls.OPENAI_API_KEY:
+                raise ValueError("OPENAI_API_KEY required for local models")
             return {
                 "model": cls.AI_MODEL,
-                "api_key": cls.OPENAI_API_KEY or "dummy",  # Some local models need a dummy key
+                "api_key": cls.OPENAI_API_KEY,  # NO DUMMY FALLBACK
                 "base_url": cls.AI_API_BASE,
                 "temperature": 0.7,
                 "max_tokens": 4000
@@ -157,14 +176,8 @@ class Config:
                 "max_tokens": 4000
             }
         else:
-            # Default to OpenAI-compatible endpoint
-            return {
-                "model": cls.AI_MODEL,
-                "api_key": cls.OPENAI_API_KEY or "dummy",
-                "base_url": cls.AI_API_BASE,
-                "temperature": 0.7,
-                "max_tokens": 4000
-            }
+            # NO FALLBACK - Must match a known model type
+            raise ValueError(f"Unknown model type: {cls.AI_MODEL}")
     
     @classmethod
     def validate(cls) -> None:

@@ -1,19 +1,24 @@
 """
 LangGraph nodes for the Research module.
+NO FALLBACKS - Fails immediately on any error.
 
-These nodes handle target identification and known compound research.
+These nodes handle target identification using UniProt-first approach.
+(Note: Consider using langgraph_nodes_simplified.py for direct RCSB search)
 """
 
 import re
 import json
 from typing import Dict, Any, List, Optional
 
-from langchain.chat_models import init_chat_model
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.output_parsers import PydanticOutputParser
+from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
 from langgraph.prebuilt import ToolNode
 
 from fade.state.langgraph_state import DrugDiscoveryState
-from fade.tools import get_uniprot_client, get_chembl_client, get_rcsb_client
+from fade.models.structured_outputs import TargetExtractionOutput
+from fade.tools import get_uniprot_client, get_rcsb_client
+from fade.tools.llm_client import get_llm_client
 from fade.config import config
 from fade.utils import get_logger
 
@@ -23,12 +28,12 @@ logger = get_logger("nodes.research")
 def target_research_node(state: DrugDiscoveryState) -> Dict[str, Any]:
     """
     LangGraph node for researching protein targets.
+    NO FALLBACKS - Fails immediately on any error.
     
     This node:
     1. Parses the query to extract target information
     2. Searches UniProt for protein details
-    3. Finds known compounds from ChEMBL
-    4. Checks for existing structures in PDB
+    3. Checks for existing structures in PDB
     
     Args:
         state: Current graph state
@@ -39,11 +44,10 @@ def target_research_node(state: DrugDiscoveryState) -> Dict[str, Any]:
     query = state["query"]
     logger.info(f"[Research Node] Processing query: {query}")
     
-    # Initialize LLM for parsing
-    llm_config = config.get_llm_config()
-    llm = init_chat_model(**llm_config)
+    # Initialize LLM for parsing - Will raise if fails
+    llm = get_llm_client()
     
-    # Parse query to extract target information
+    # Parse query to extract target information - NO FALLBACK
     target_info = _parse_query_with_llm(llm, query)
     
     if not target_info.get("gene_name") and not target_info.get("uniprot_id"):
@@ -53,7 +57,7 @@ def target_research_node(state: DrugDiscoveryState) -> Dict[str, Any]:
             "current_step": "research_failed"
         }
     
-    # Search UniProt
+    # Search UniProt - NO ERROR HANDLING
     uniprot_client = get_uniprot_client()
     protein_data = _search_uniprot(uniprot_client, target_info)
     
@@ -67,12 +71,8 @@ def target_research_node(state: DrugDiscoveryState) -> Dict[str, Any]:
     # Merge protein data with target info
     target_info.update(protein_data)
     
-    # Search for known compounds
+    # Known compounds removed - ChEMBL integration deprecated
     known_compounds = []
-    if target_info.get("uniprot_id"):
-        chembl_client = get_chembl_client()
-        known_compounds = _search_known_compounds(chembl_client, target_info["uniprot_id"])
-        logger.info(f"Found {len(known_compounds)} known compounds")
     
     # Check for existing structures with enhanced ligand information
     existing_structures = []
@@ -98,16 +98,12 @@ def target_research_node(state: DrugDiscoveryState) -> Dict[str, Any]:
     
     # Add message to history
     message = f"Identified target: {target_info.get('protein_name')} ({target_info.get('uniprot_id')})"
-    if known_compounds:
-        message += f"\nFound {len(known_compounds)} known compounds"
     if existing_structures:
         message += f"\nFound {len(existing_structures)} existing structures"
     
     # Store existing structures with ligand info for structure module to use
     if existing_structures:
         target_info["existing_structures"] = existing_structures
-        # Also store known compounds for cross-reference
-        target_info["known_compounds"] = known_compounds
     
     return {
         "target_info": target_info,
@@ -121,6 +117,7 @@ def target_research_node(state: DrugDiscoveryState) -> Dict[str, Any]:
 def validate_target_node(state: DrugDiscoveryState) -> Dict[str, Any]:
     """
     LangGraph node for validating target information.
+    NO FALLBACKS - Strict validation.
     
     This node checks if we have enough information to proceed.
     
@@ -132,7 +129,7 @@ def validate_target_node(state: DrugDiscoveryState) -> Dict[str, Any]:
     """
     target_info = state.get("target_info", {})
     
-    # Check minimum requirements
+    # Check minimum requirements - NO DEFAULTS
     if not target_info.get("sequence"):
         return {
             "error": "No protein sequence found for target",
@@ -159,82 +156,87 @@ def validate_target_node(state: DrugDiscoveryState) -> Dict[str, Any]:
 
 def _parse_query_with_llm(llm, query: str) -> Dict[str, Any]:
     """
-    Parse natural language query using LLM.
+    Parse natural language query using LLM with structured outputs.
     
     Args:
         llm: Language model instance
         query: Natural language query
         
     Returns:
-        Extracted target information
+        Extracted target information as dict
+        
+    Raises:
+        ValueError: If parsing fails
     """
-    system_prompt = """You are a bioinformatics expert. Extract protein target information from the drug discovery query.
+    # Create output parser
+    parser = PydanticOutputParser(pydantic_object=TargetExtractionOutput)
     
-    Return ONLY a JSON object with these fields:
-    {
-        "gene_name": "gene symbol like KRAS, EGFR",
-        "protein_name": "protein name if mentioned",
-        "uniprot_id": "UniProt ID if mentioned like P01112",
-        "organism": "organism, default to human",
-        "mutations": ["list", "of", "mutations", "like", "G12C"],
-        "disease_context": "disease context if mentioned"
-    }
+    # Create prompt template
+    prompt = PromptTemplate(
+        template="""You are a bioinformatics expert. Extract protein target information from this drug discovery query.
+
+Query: {query}
+
+Focus on:
+- Gene symbols (KRAS, EGFR, BTK, JAK2)
+- Protein names (kinases, proteases, receptors)
+- UniProt IDs if mentioned (like P01112)
+- Specific mutations (G12C, T790M, L858R)
+- Disease context and requirements
+
+{format_instructions}
+
+Extracted Information:""",
+        input_variables=["query"],
+        partial_variables={"format_instructions": parser.get_format_instructions()}
+    )
     
-    Return ONLY valid JSON, no other text."""
+    # Format the prompt
+    formatted_prompt = prompt.format(query=query)
     
+    # Invoke the LLM
+    response = llm.invoke(formatted_prompt)
+    
+    # Extract content
+    content = response.content if hasattr(response, 'content') else str(response)
+    
+    # Parse with Pydantic
     try:
-        response = llm.invoke([
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=f"Extract target from: {query}")
-        ])
+        result = parser.parse(content)
+        logger.info(f"Successfully parsed target: {result.gene_name or result.protein_name}")
+        # Convert to dict for backward compatibility
+        target_info = result.dict(exclude_none=True)
         
-        # Parse JSON from response
-        content = response.content.strip()
+        # Add organism default if not present (for backward compatibility)
+        if 'organism' not in target_info:
+            target_info['organism'] = 'Homo sapiens'
+            
+        return target_info
         
-        # Try to extract JSON
-        if content.startswith('{'):
-            return json.loads(content)
-        else:
-            # Try to find JSON in the response
-            json_match = re.search(r'\{.*\}', content, re.DOTALL)
-            if json_match:
-                return json.loads(json_match.group())
     except Exception as e:
-        logger.warning(f"LLM parsing failed: {e}")
-    
-    # Fallback to regex parsing
-    return _fallback_parse_query(query)
-
-
-def _fallback_parse_query(query: str) -> Dict[str, Any]:
-    """
-    Fallback query parser using regex.
-    
-    Args:
-        query: Natural language query
-        
-    Returns:
-        Extracted target information
-    """
-    query_upper = query.upper()
-    
-    # Common gene names
-    gene_pattern = r'\b(KRAS|BRAF|EGFR|HER2|ALK|MET|RET|ROS1|NTRK|PIK3CA|PTEN|TP53|CDK4|CDK6|VEGFR|FGFR|PDGFR)\b'
-    gene_match = re.search(gene_pattern, query_upper)
-    
-    # Mutations
-    mutations = re.findall(r'([A-Z]\d+[A-Z])', query_upper)
-    
-    return {
-        "gene_name": gene_match.group(1) if gene_match else None,
-        "mutations": mutations if mutations else [],
-        "organism": "human"
-    }
+        # Fallback: Try JSON extraction
+        logger.warning(f"Structured parsing failed, trying JSON extraction: {e}")
+        json_match = re.search(r'\{.*\}', content, re.DOTALL)
+        if json_match:
+            try:
+                data = json.loads(json_match.group())
+                # Validate with model
+                result = TargetExtractionOutput(**data)
+                target_info = result.dict(exclude_none=True)
+                if 'organism' not in target_info:
+                    target_info['organism'] = 'Homo sapiens'
+                return target_info
+            except Exception as json_error:
+                logger.error(f"JSON parsing also failed: {json_error}")
+                raise ValueError(f"Failed to parse query: {query}")
+        else:
+            raise ValueError(f"No valid output found in LLM response")
 
 
 def _search_uniprot(uniprot_client, target_info: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """
     Search UniProt for protein information.
+    NO FALLBACK - Returns None if not found.
     
     Args:
         uniprot_client: UniProt API client
@@ -270,51 +272,8 @@ def _search_uniprot(uniprot_client, target_info: Dict[str, Any]) -> Optional[Dic
                 parsed["sequence_length"] = len(sequence)
             return parsed
     
+    # NO FALLBACK - Return None if not found
     return None
 
 
-def _search_known_compounds(chembl_client, uniprot_id: str) -> List[Dict[str, Any]]:
-    """
-    Search for known compounds targeting the protein.
-    
-    Args:
-        chembl_client: ChEMBL API client
-        uniprot_id: UniProt accession ID
-        
-    Returns:
-        List of known compounds
-    """
-    compounds = []
-    
-    # Search ChEMBL
-    chembl_compounds = chembl_client.search_by_target(uniprot_id, limit=50)
-    
-    for comp in chembl_compounds:
-        if comp.get("smiles"):
-            compound = {
-                "compound_id": comp["compound_id"],
-                "name": comp.get("name"),
-                "smiles": comp["smiles"],
-                "binding_affinity": comp.get("binding_affinity"),
-                "affinity_unit": comp.get("affinity_unit"),
-                "source": "ChEMBL",
-                "clinical_phase": comp.get("clinical_phase"),
-                "mechanism": comp.get("activity_type")
-            }
-            compounds.append(compound)
-    
-    # Also get approved drugs
-    approved_drugs = chembl_client.search_approved_drugs(uniprot_id)
-    for drug in approved_drugs:
-        if drug.get("smiles") and drug["compound_id"] not in [c["compound_id"] for c in compounds]:
-            compounds.append({
-                "compound_id": drug["compound_id"],
-                "name": drug.get("name"),
-                "smiles": drug["smiles"],
-                "binding_affinity": drug.get("binding_affinity"),
-                "affinity_unit": drug.get("affinity_unit"),
-                "source": "ChEMBL",
-                "clinical_phase": "Approved"
-            })
-    
-    return compounds
+# ChEMBL compound search removed - deprecated functionality

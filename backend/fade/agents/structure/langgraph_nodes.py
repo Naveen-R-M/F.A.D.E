@@ -87,6 +87,13 @@ def structure_resolver_node(state: DrugDiscoveryState) -> Dict[str, Any]:
                     "current_step": "structure_found",
                     "should_continue": True
                 }
+        else:
+            # NO FALLBACK - Must have drug-like ligands
+            return {
+                "error": "No PDB structures with drug-like ligands found. Try a more specific query like 'TARGET_NAME kinase domain with inhibitor' or 'TARGET_NAME with DRUG_NAME'",
+                "should_continue": False,
+                "current_step": "structure_failed"
+            }
     
     # Option 2: Try AlphaFold database
     if uniprot_id:
@@ -254,11 +261,12 @@ def _select_best_pdb(structures: list, target_info: Optional[Dict] = None) -> Op
     known_compounds = target_info.get("known_compounds", []) if target_info else []
     
     # Use the enhanced selection function from utils
+    # NO FALLBACK - Must have drug-like ligands
     best = select_best_structure(
         structures,
         target_mutations=mutations,
         known_compounds=known_compounds,
-        fallback_to_any=True  # Allow fallback to non-drug structures if needed
+        fallback_to_any=False  # NO FALLBACK - strict requirement
     )
     
     if best:

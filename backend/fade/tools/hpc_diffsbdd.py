@@ -393,7 +393,7 @@ obabel {remote_sdf} -O {smiles_file} -h
 #SBATCH --job-name=diffsbdd_{job_id}
 #SBATCH --output={remote_dir}/slurm-%j.out
 #SBATCH --error={remote_dir}/slurm-%j.err
-#SBATCH --partition=short
+#SBATCH --partition=gpu-short
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4

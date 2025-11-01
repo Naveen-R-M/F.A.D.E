@@ -93,7 +93,7 @@ Examples:
                 "gene_name": final_state.get("target_info", {}).get("gene_name"),
                 "mutations": final_state.get("target_info", {}).get("mutations")
             } if final_state.get("target_info") else None,
-            "known_compounds_count": len(final_state.get("known_compounds", [])),
+
             "messages": [msg.content if hasattr(msg, 'content') else str(msg) 
                         for msg in final_state.get("messages", [])]
         }
@@ -121,18 +121,7 @@ Examples:
             if target.get("sequence_length"):
                 print(f"  • Sequence Length: {target['sequence_length']} amino acids")
             
-            if final_state.get("known_compounds"):
-                compounds = final_state["known_compounds"]
-                print(f"\n✓ Known Compounds: {len(compounds)}")
-                
-                # Show top 5 compounds
-                approved = [c for c in compounds if c.get("clinical_phase") == "Approved"]
-                if approved:
-                    print(f"  • Approved Drugs: {len(approved)}")
-                    for drug in approved[:3]:
-                        name = drug.get("name") or drug.get("compound_id")
-                        print(f"    - {name}")
-                
+
             if target.get("existing_structures"):
                 structures = target["existing_structures"]
                 print(f"\n✓ Existing Structures: {len(structures)} PDB entries")

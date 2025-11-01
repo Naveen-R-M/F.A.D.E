@@ -14,7 +14,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from fade.agents.base_agent import BaseAgent
 from fade.state import DrugDiscoveryState, ProteinTarget, KnownCompound
-from fade.tools import get_uniprot_client, get_chembl_client, get_rcsb_client
+from fade.tools import get_uniprot_client, get_rcsb_client
 from fade.config import config
 from fade.utils import get_logger
 

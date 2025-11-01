@@ -206,6 +206,40 @@ class HPCSSHClient:
         stdout, stderr, exit_code = self.execute_command(f"test -e {remote_path}")
         return exit_code == 0
     
+    def upload_content(self, content: str, remote_path: str) -> bool:
+        """
+        Upload text content directly to remote file.
+        
+        Args:
+            content: Text content to upload
+            remote_path: Remote destination path
+            
+        Returns:
+            True if upload successful
+        """
+        if not self.sftp:
+            if not self.connect():
+                return False
+        
+        try:
+            import tempfile
+            # Create temporary local file
+            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.tmp') as f:
+                f.write(content)
+                temp_path = f.name
+            
+            # Upload temp file
+            result = self.upload_file(temp_path, remote_path)
+            
+            # Clean up temp file
+            os.unlink(temp_path)
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Content upload failed: {e}")
+            return False
+    
     def close(self):
         """Close SSH connection."""
         try:
@@ -217,6 +251,10 @@ class HPCSSHClient:
         except:
             # Ignore errors during shutdown
             pass
+    
+    def disconnect(self):
+        """Disconnect from HPC (alias for close)."""
+        self.close()
     
     def __del__(self):
         """Cleanup on deletion."""

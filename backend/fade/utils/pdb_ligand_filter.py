@@ -127,6 +127,15 @@ def filter_structures_by_ligands(structures: List[Dict[str, Any]]) -> List[Dict[
             logger.info(f"PDB {structure.get('pdb_id')} has {len(drug_like_ligands)} drug-like ligands")
     
     logger.info(f"Filtered {len(structures)} structures to {len(filtered)} with drug-like ligands")
+    
+    if len(filtered) == 0 and len(structures) > 0:
+        # Log what was filtered out for debugging
+        logger.warning("All structures filtered out. Common non-drug-like ligands found:")
+        all_ligands = set()
+        for struct in structures[:5]:  # Check first 5
+            for lig in struct.get("ligands", []):
+                all_ligands.add(lig.get("id", "UNK"))
+        logger.warning(f"  Ligands seen: {', '.join(sorted(all_ligands))}")
     return filtered
 
 
@@ -277,7 +286,8 @@ def rank_structures_by_quality(
     if require_drug_like:
         structures = filter_structures_by_ligands(structures)
         if not structures:
-            logger.warning("No structures with drug-like ligands found")
+            logger.error("No structures with drug-like ligands found")
+            logger.info("Try a more specific query like 'EGFR kinase domain with inhibitor' or 'EGFR erlotinib'")
             return []
     
     # Score each structure

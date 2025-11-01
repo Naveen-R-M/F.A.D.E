@@ -1,5 +1,5 @@
 """
-Main LangGraph workflow for drug discovery pipeline.
+Main LangGraph workflow for drug discovery pipeline with simplified research.
 
 This module defines the StateGraph that orchestrates all agents.
 """
@@ -12,10 +12,13 @@ from langgraph.graph import StateGraph, END
 from langchain_core.messages import HumanMessage
 
 from fade.state.langgraph_state import DrugDiscoveryState
-from fade.agents.research.langgraph_nodes import (
+
+# Use the simplified research nodes
+from fade.agents.research.langgraph_nodes_simplified import (
     target_research_node, 
     validate_target_node
 )
+
 from fade.agents.structure.langgraph_nodes import (
     structure_resolver_node,
     structure_wait_node
@@ -264,6 +267,7 @@ def run_drug_discovery_pipeline(query: str, user_id: str = None) -> Dict[str, An
         Final state with results
     """
     logger.info(f"Starting pipeline for query: {query}")
+    logger.info("Using simplified workflow: Query → RCSB → Structure/Pockets → Molecules")
     
     # Create initial state
     run_id = str(uuid.uuid4())[:8]
@@ -300,10 +304,7 @@ def run_drug_discovery_pipeline(query: str, user_id: str = None) -> Dict[str, An
         # Generate summary
         if final_state.get("target_info"):
             target = final_state["target_info"]
-            summary = f"Pipeline completed for {target.get('protein_name')} ({target.get('uniprot_id')})"
-            
-            if final_state.get("known_compounds"):
-                summary += f"\n- Found {len(final_state['known_compounds'])} known compounds"
+            summary = f"Pipeline completed for {target.get('protein_name')} ({target.get('uniprot_id') or 'PDB-derived'})"
             
             if final_state.get("structure"):
                 structure = final_state["structure"]
@@ -337,10 +338,13 @@ if __name__ == "__main__":
     
     if result.get("target_info"):
         print(f"✓ Target: {result['target_info'].get('protein_name')}")
-        print(f"✓ UniProt: {result['target_info'].get('uniprot_id')}")
+        print(f"✓ UniProt: {result['target_info'].get('uniprot_id', 'N/A')}")
         
-        if result.get("known_compounds"):
-            print(f"✓ Known compounds: {len(result['known_compounds'])}")
+        if result['target_info'].get('existing_structures'):
+            structures = result['target_info']['existing_structures']
+            print(f"✓ PDB structures: {len(structures)}")
+            for s in structures[:3]:
+                print(f"  - {s['pdb_id']}: {s.get('title', 'N/A')[:50]}...")
         
         if result.get("structure"):
             print(f"✓ Structure: {result['structure'].get('source')}")

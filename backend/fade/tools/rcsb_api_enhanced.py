@@ -32,17 +32,23 @@ class RCSBEnhancedClient:
         self.search_url = "https://search.rcsb.org/rcsbsearch/v2/query"
         self.data_url = "https://data.rcsb.org/rest/v1/core"
         self.timeout = timeout
-        self.session = httpx.Client(timeout=timeout)
+        # Add headers that might be required
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "F.A.D.E/1.0 (Drug Discovery Pipeline)"
+        }
+        self.session = httpx.Client(timeout=timeout, headers=headers)
         
-    def search_by_query(self, query: str, limit: int = 10) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    def search_by_query(self, query: str, limit: int = 10, original_target: Optional[Dict[str, Any]] = None) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
         """
         Search RCSB for structures with small molecule complexes.
-        OPTIMIZED to find drug-like small molecule inhibitors.
-        NO ERROR HANDLING - Fails on any error.
+        CRITICAL: Validates results against original target to prevent target amnesia.
         
         Args:
             query: Search query (should include inhibitor/drug keywords)
             limit: Maximum number of structures to return
+            original_target: Original target info with UniProt ID for validation
             
         Returns:
             Tuple of (list of structures, target info dict)
@@ -54,16 +60,41 @@ class RCSBEnhancedClient:
         # Build advanced search query to prioritize small molecule complexes
         search_query = self._build_small_molecule_search_query(query)
         
+        # Debug: print the search query
+        logger.debug(f"Search query built: {json.dumps(search_query, indent=2)[:500]}")
+        
         # NO ERROR HANDLING - Let errors propagate
         response = self.session.post(
             self.search_url,
             json=search_query,
             params={"rows": limit * 3}  # Get more initially to filter for small molecules
         )
-        response.raise_for_status()  # Will raise on HTTP errors
         
-        data = response.json()
-        pdb_ids = [entry["identifier"] for entry in data.get("result_set", [])]
+        # Debug: check response before parsing
+        logger.debug(f"Response status: {response.status_code}")
+        logger.debug(f"Response content-type: {response.headers.get('content-type')}")
+        logger.debug(f"Response size: {len(response.content)} bytes")
+        
+        # Handle 204 No Content - means no results found
+        if response.status_code == 204:
+            logger.info("RCSB returned 204 No Content - no results found")
+            pdb_ids = []
+        else:
+            response.raise_for_status()  # Will raise on other HTTP errors
+            
+            # Check if response is empty
+            if not response.content:
+                logger.warning("Empty response from RCSB, treating as no results")
+                pdb_ids = []
+            else:
+                # Try to parse JSON with better error handling
+                try:
+                    data = response.json()
+                    pdb_ids = [entry["identifier"] for entry in data.get("result_set", [])]
+                except json.JSONDecodeError as e:
+                    logger.error(f"Failed to parse RCSB response as JSON: {e}")
+                    logger.error(f"Response text (first 500 chars): {response.text[:500]}")
+                    raise ValueError(f"Invalid JSON response from RCSB: {e}")
         
         if not pdb_ids:
             # Try broader search without strict filtering
@@ -74,16 +105,53 @@ class RCSBEnhancedClient:
                 json=broader_query,
                 params={"rows": limit * 2}
             )
-            response.raise_for_status()
-            data = response.json()
-            pdb_ids = [entry["identifier"] for entry in data.get("result_set", [])]
+            # Handle 204 No Content
+            if response.status_code == 204:
+                logger.info("RCSB returned 204 for broader search - no results")
+                pdb_ids = []
+            else:
+                response.raise_for_status()
+                
+                # Check if response is empty
+                if not response.content:
+                    logger.warning("Empty response from RCSB (broader search)")
+                    pdb_ids = []
+                else:
+                    try:
+                        data = response.json()
+                        pdb_ids = [entry["identifier"] for entry in data.get("result_set", [])]
+                    except json.JSONDecodeError as e:
+                        logger.error(f"Failed to parse RCSB broader search response: {e}")
+                        logger.error(f"Response text (first 500 chars): {response.text[:500]}")
+                        raise ValueError(f"Invalid JSON response from RCSB: {e}")
             
             if not pdb_ids:
-                raise ValueError(f"No PDB structures found for query: {query}")
+                # Return structured response for no results instead of raising error
+                logger.info(f"No PDB structures found for query: {query}")
+                return [], {
+                    "no_results": True,
+                    "original_query": query,
+                    "search_attempts": [
+                        {"type": "strict", "query": json.dumps(search_query, indent=2)[:200], "results": 0},
+                        {"type": "broad", "query": json.dumps(broader_query, indent=2)[:200], "results": 0}
+                    ]
+                }
         
         # Get detailed info for each PDB and extract target information
         structures = []
         target_info = {}
+        
+        # CRITICAL: Use original target for validation if provided
+        if original_target:
+            expected_uniprot = original_target.get("uniprot_id")
+            expected_gene = original_target.get("gene_name", "").upper()
+            expected_protein = original_target.get("protein_name", "").upper()
+            logger.info(f"Validating structures against original target: {expected_gene} (UniProt: {expected_uniprot})")
+        else:
+            # Fallback to extracting from query if no original target
+            expected_target = self._extract_target_name(query)
+            expected_uniprot = None
+            logger.info(f"Looking for structures of target: {expected_target}")
         
         for pdb_id in pdb_ids[:limit * 2]:  # Check more structures to find ones with small molecules
             try:
@@ -91,14 +159,76 @@ class RCSBEnhancedClient:
                 if not structure_data:
                     continue
                 
+                # CRITICAL: Validate this structure matches our target
+                struct_target_info = structure_data.get("target_info", {})
+                struct_protein = struct_target_info.get("protein_name", "").upper()
+                struct_gene = struct_target_info.get("gene_name", "").upper()
+                struct_uniprot = struct_target_info.get("uniprot_id")
+                
+                # STRONGEST VALIDATION: Check UniProt ID if available
+                if expected_uniprot and struct_uniprot:
+                    if struct_uniprot != expected_uniprot:
+                        logger.debug(f"Skipping {pdb_id}: UniProt {struct_uniprot} doesn't match target {expected_uniprot}")
+                        continue
+                    else:
+                        logger.debug(f"✓ {pdb_id} matches target UniProt {expected_uniprot}")
+                
+                # If no UniProt match, check gene/protein names
+                elif original_target:
+                    # Skip DNA/RNA structures when looking for proteins
+                    if "DNA" in struct_protein or "RNA" in struct_protein:
+                        logger.debug(f"Skipping {pdb_id}: nucleic acid structure, not protein")
+                        continue
+                    
+                    # Check for target match
+                    gene_match = (expected_gene and (expected_gene in struct_gene or struct_gene in expected_gene))
+                    protein_match = (expected_protein and (expected_protein in struct_protein or struct_protein in expected_protein))
+                    
+                    # Special case for RAS family
+                    ras_match = ("RAS" in expected_gene and "RAS" in struct_protein)
+                    
+                    if not (gene_match or protein_match or ras_match):
+                        logger.debug(f"Skipping {pdb_id}: {struct_gene}/{struct_protein} doesn't match {expected_gene}/{expected_protein}")
+                        continue
+                else:
+                    # Old validation logic for backward compatibility
+                    if expected_target:
+                        expected_upper = expected_target.upper()
+                        
+                        # Skip DNA/RNA structures when looking for proteins
+                        if "DNA" in struct_protein.upper() or "RNA" in struct_protein.upper():
+                            logger.debug(f"Skipping {pdb_id}: nucleic acid structure, not protein")
+                            continue
+                        
+                        # Check for target match
+                        protein_match = (expected_upper in struct_protein or 
+                                       struct_protein in expected_upper)
+                        gene_match = (expected_upper in struct_gene or 
+                                    struct_gene in expected_upper)
+                        
+                        # Special case for RAS family
+                        ras_match = ("RAS" in expected_upper and "RAS" in struct_protein)
+                        
+                        if not (protein_match or gene_match or ras_match):
+                            logger.debug(f"Skipping {pdb_id}: protein '{struct_protein}' / gene '{struct_gene}' doesn't match target '{expected_target}'")
+                            continue
+                
                 # Only keep structures with drug-like small molecules
                 if structure_data["structure"].get("has_drug_like_ligand"):
                     structures.append(structure_data["structure"])
                     
                     # Extract and merge target information from first valid structure
                     if not target_info and structure_data.get("target_info"):
-                        target_info = structure_data["target_info"]
-                        logger.info(f"Extracted target info from {pdb_id}: {target_info.get('protein_name')}")
+                        # If we have original target, preserve it
+                        if original_target:
+                            target_info = original_target.copy()
+                            # Only add sequence if missing
+                            if not target_info.get("sequence") and structure_data["target_info"].get("sequence"):
+                                target_info["sequence"] = structure_data["target_info"]["sequence"]
+                                target_info["sequence_length"] = structure_data["target_info"].get("sequence_length")
+                        else:
+                            target_info = structure_data["target_info"]
+                        logger.info(f"Using target info: {target_info.get('protein_name')} ({target_info.get('uniprot_id')})")
                     
                     # Stop if we have enough structures with small molecules
                     if len(structures) >= limit:
@@ -109,38 +239,66 @@ class RCSBEnhancedClient:
                 continue
         
         if not structures:
-            raise ValueError(f"No structures with small molecule inhibitors found for: {query}")
+            # Return structured response for no small molecule structures
+            logger.info(f"No structures with small molecule inhibitors found for: {query}")
+            return [], {
+                "no_results": True,
+                "no_small_molecules": True,
+                "original_query": query,
+                "pdb_ids_checked": pdb_ids[:limit] if pdb_ids else [],
+                "message": "Found PDB structures but none contain drug-like small molecules"
+            }
         
         if not target_info:
-            raise ValueError(f"Could not extract target information from PDB structures for: {query}")
+            # Return structures but indicate missing target info
+            logger.warning(f"Could not extract target information from PDB structures for: {query}")
+            return structures, {
+                "partial_results": True,
+                "original_query": query,
+                "message": "Found structures but could not extract complete target information"
+            }
         
         logger.info(f"Found {len(structures)} structures with small molecule inhibitors")
         return structures, target_info
     
-    def _build_small_molecule_search_query(self, query: str) -> Dict[str, Any]:
+    def _extract_target_name(self, query: str) -> str:
         """
-        Build search query optimized for small molecule complexes.
+        Extract the likely target name from a query.
         
         Args:
-            query: User query string
+            query: Search query string
+            
+        Returns:
+            Extracted target name
+        """
+        # Remove common drug-related words
+        drug_words = {"inhibitor", "antagonist", "agonist", "ligand", "drug", 
+                     "compound", "small", "molecule", "complex", "with", 
+                     "human", "for", "of", "in", "and"}
+        
+        # Split query and filter out drug-related words
+        words = query.split()
+        target_words = [w for w in words if w.lower() not in drug_words]
+        
+        # Return the first meaningful word (usually the target)
+        return target_words[0] if target_words else query.split()[0]
+    
+    def _build_small_molecule_search_query(self, query: str) -> Dict[str, Any]:
+        """
+        Build search query optimized for finding specific protein structures.
+        FOCUSED: Use the query as-is (should already be focused like "KRAS GDP")
+        
+        Args:
+            query: Search query string (should be focused, e.g. "KRAS GDP")
             
         Returns:
             RCSB search query dictionary
         """
-        # Extract keywords that suggest we want small molecules
-        small_molecule_keywords = [
-            "inhibitor", "antagonist", "agonist", "ligand", 
-            "drug", "compound", "small molecule", "complex"
-        ]
+        # The query should already be focused (e.g., "KRAS GDP" or "BTK ibrutinib")
+        # Don't add extra keywords that make it too restrictive
+        logger.debug(f"Building RCSB search for: {query}")
         
-        # Check if query already has small molecule keywords
-        has_sm_keyword = any(kw in query.lower() for kw in small_molecule_keywords)
-        
-        if not has_sm_keyword:
-            # Add "inhibitor" to help find small molecule complexes
-            query = f"{query} inhibitor"
-        
-        # Build query with resolution and method filters
+        # Build query with quality filters but not overly restrictive
         return {
             "query": {
                 "type": "group",
@@ -150,7 +308,7 @@ class RCSBEnhancedClient:
                         "type": "terminal",
                         "service": "full_text",
                         "parameters": {
-                            "value": query
+                            "value": query  # Use the focused query
                         }
                     },
                     {
@@ -159,7 +317,7 @@ class RCSBEnhancedClient:
                         "parameters": {
                             "attribute": "exptl.method",
                             "operator": "in",
-                            "value": ["X-RAY DIFFRACTION", "ELECTRON MICROSCOPY"]
+                            "value": ["X-RAY DIFFRACTION", "ELECTRON MICROSCOPY", "SOLUTION NMR"]
                         }
                     },
                     {
@@ -168,7 +326,7 @@ class RCSBEnhancedClient:
                         "parameters": {
                             "attribute": "rcsb_entry_info.resolution_combined",
                             "operator": "less_or_equal",
-                            "value": 2.5  # Good resolution for drug discovery
+                            "value": 4.0  # Reasonable cutoff for drug discovery
                         }
                     }
                 ]
@@ -190,6 +348,7 @@ class RCSBEnhancedClient:
     def _build_broader_search_query(self, query: str) -> Dict[str, Any]:
         """
         Build a broader search query as fallback.
+        This is especially important for non-kinase targets.
         
         Args:
             query: User query string
@@ -197,12 +356,18 @@ class RCSBEnhancedClient:
         Returns:
             Broader RCSB search query
         """
+        # For Cyclophilin/PPIA, simplify the query significantly
+        # Extract just the main protein name/gene
+        query_parts = query.split()
+        main_term = query_parts[0] if query_parts else query
+        
+        # Simple full-text search without strict filters
         return {
             "query": {
                 "type": "terminal",
-                "service": "full_text",
+                "service": "full_text",  # Changed from "text" to "full_text"
                 "parameters": {
-                    "value": query
+                    "value": main_term  # Just search for "PPIA" or the gene name
                 }
             },
             "request_options": {
@@ -213,8 +378,59 @@ class RCSBEnhancedClient:
                         "sort_by": "score",
                         "direction": "desc"
                     }
-                ],
-                "scoring_strategy": "combined"
+                ]
+            },
+            "return_type": "entry"
+        }
+    
+    def _build_broader_search_query(self, query: str) -> Dict[str, Any]:
+        """
+        Build a broader search query as fallback.
+        IMPORTANT: Must preserve the original target context!
+        
+        Args:
+            query: User query string (should contain the target name)
+            
+        Returns:
+            Broader RCSB search query
+        """
+        # CRITICAL FIX: Don't just take the first word!
+        # For "KRAS inhibitor antagonist ligand small molecule", we want "KRAS"
+        # For "PPIA inhibitor", we want "PPIA"  
+        # The target name is usually the first meaningful word before drug-related terms
+        
+        # Remove common drug-related words to get the target
+        drug_words = {"inhibitor", "antagonist", "agonist", "ligand", "drug", 
+                     "compound", "small", "molecule", "complex", "with"}
+        
+        # Split query and filter out drug-related words
+        words = query.split()
+        target_words = [w for w in words if w.lower() not in drug_words]
+        
+        # The target is the remaining words (usually gene/protein name)
+        target_query = " ".join(target_words) if target_words else query.split()[0]
+        
+        logger.info(f"Broader search for target: {target_query}")
+        
+        # Search for just the target without strict filters
+        # This will find both apo and holo structures
+        return {
+            "query": {
+                "type": "terminal",
+                "service": "full_text",
+                "parameters": {
+                    "value": target_query  # Just the target name
+                }
+            },
+            "request_options": {
+                "return_all_hits": False,
+                "results_content_type": ["experimental"],
+                "sort": [
+                    {
+                        "sort_by": "score",
+                        "direction": "desc"
+                    }
+                ]
             },
             "return_type": "entry"
         }
@@ -282,6 +498,58 @@ class RCSBEnhancedClient:
             "structure": structure_info,
             "target_info": target_info
         }
+    
+    def get_structure_by_id(self, pdb_id: str) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        """
+        Fetch a specific PDB structure by ID.
+        FOR DIRECT PDB QUERIES - Returns structure regardless of ligands.
+        
+        Args:
+            pdb_id: 4-character PDB ID
+            
+        Returns:
+            Tuple of ([structure], target_info dict)
+            Returns ([], None) if structure not found
+        """
+        logger.info(f"Fetching specific PDB structure: {pdb_id}")
+        
+        try:
+            # Get the structure info using existing method
+            result = self.get_enhanced_structure_info(pdb_id)
+            
+            if not result:
+                logger.warning(f"PDB {pdb_id} not found")
+                return [], None
+            
+            structure = result["structure"]
+            target_info = result.get("target_info", {})
+            
+            # For direct PDB queries, we return the structure AS IS
+            # Don't filter based on ligands - user asked for THIS structure
+            logger.info(f"Found PDB {pdb_id}: {structure.get('title', 'Unknown')[:80]}")
+            
+            # Log ligand information but don't filter
+            if structure.get("ligands"):
+                ligand_ids = [l.get("id") for l in structure["ligands"][:5]]
+                logger.info(f"  Contains ligands: {', '.join(ligand_ids)}")
+                if structure.get("has_drug_like_ligand"):
+                    logger.info(f"  Has drug-like ligands: Yes")
+                else:
+                    logger.info(f"  Has drug-like ligands: No (cofactors/ions only)")
+            else:
+                logger.info(f"  No ligands found (apo structure)")
+            
+            # Return as list for consistency with search_by_query
+            return [structure], target_info
+            
+        except ValueError as e:
+            # Structure not found
+            logger.warning(f"PDB {pdb_id} not found: {e}")
+            return [], None
+        except Exception as e:
+            # Other errors - log but return empty
+            logger.error(f"Error fetching PDB {pdb_id}: {e}")
+            return [], None
     
     def get_structure_ligands_fixed(self, pdb_id: str, entry_data: Dict[str, Any]) -> List[Dict[str, Any]]:
         """

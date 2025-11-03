@@ -81,12 +81,19 @@ Examples:
     # Output results
     if args.output_format == "json":
         # Convert to JSON-serializable format
+        status = "completed"
+        if final_state.get("error"):
+            status = "needs_refinement" if final_state.get("error_type") == "no_structures_found" else "failed"
+        
         output = {
             "run_id": final_state["run_id"],
             "query": final_state["query"],
-            "status": "completed" if not final_state.get("error") else "failed",
+            "status": status,
             "error": final_state.get("error"),
+            "error_type": final_state.get("error_type"),
             "current_step": final_state.get("current_step"),
+            "suggested_queries": final_state.get("suggested_queries"),
+            "guidance": final_state.get("guidance"),
             "target": {
                 "name": final_state.get("target_info", {}).get("protein_name"),
                 "uniprot_id": final_state.get("target_info", {}).get("uniprot_id"),
@@ -105,8 +112,34 @@ Examples:
         print("="*80)
         
         if final_state.get("error"):
-            print(f"\n❌ Pipeline Failed: {final_state['error']}")
-            print(f"   Step: {final_state.get('current_step', 'unknown')}")
+            # Check if this is guidance rather than a hard error
+            if final_state.get("error_type") in ["no_structures_found", "uniprot_not_found"]:
+                # Both RCSB and UniProt guidance use similar format
+                print("\n" + "="*80)
+                if final_state.get("error_type") == "uniprot_not_found":
+                    # UniProt guidance is already well-formatted
+                    print(final_state['error'])
+                else:
+                    # RCSB guidance
+                    print("💡 QUERY REFINEMENT NEEDED")
+                    print("="*80)
+                    print(f"\n{final_state['error']}")
+                    
+                    # Show suggested queries if available
+                    if final_state.get("suggested_queries"):
+                        print("\n📝 Try one of these queries:")
+                        for i, suggestion in enumerate(final_state["suggested_queries"], 1):
+                            print(f"   {i}. python main.py \"{suggestion}\"")
+                    
+                    # Show detailed guidance if available
+                    if final_state.get("guidance"):
+                        guidance = final_state["guidance"]
+                        if guidance.get("refinement") and guidance["refinement"].get("confidence"):
+                            confidence = guidance["refinement"]["confidence"]
+                            print(f"\n🎯 Confidence in suggestions: {confidence:.0%}")
+            else:
+                print(f"\n❌ Pipeline Failed: {final_state['error']}")
+                print(f"   Step: {final_state.get('current_step', 'unknown')}")
         
         elif final_state.get("target_info"):
             target = final_state["target_info"]

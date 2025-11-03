@@ -6,7 +6,7 @@ throughout the drug discovery pipeline.
 """
 
 from typing import Optional, List, Dict, Any, Literal
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, model_validator
 
 
 # ============================================================================
@@ -25,6 +25,14 @@ class TargetExtractionOutput(BaseModel):
     protein_name: Optional[str] = Field(
         None, 
         description="Common protein name (focus on KINASES, PROTEASES, RECEPTORS)"
+    )
+    pdb_id: Optional[str] = Field(
+        None,
+        description="A 4-character PDB ID if one was explicitly mentioned (e.g., 4OBE, 8AFB)"
+    )
+    uniprot_id: Optional[str] = Field(
+        None,
+        description="A 6 or 10-character UniProt ID if one was explicitly mentioned (e.g., P01116, A0A1L1T3F0)"
     )
     mutations: List[str] = Field(
         default_factory=list,
@@ -47,12 +55,42 @@ class TargetExtractionOutput(BaseModel):
         description="Other requirements mentioned (BBB penetrant, oral bioavailability, etc.)"
     )
     
-    @validator('gene_name', 'protein_name')
-    def at_least_one_identifier(cls, v, values):
-        """Ensure we have at least a gene name or protein name."""
-        if not v and not values.get('gene_name') and not values.get('protein_name'):
-            raise ValueError("Must have either gene_name or protein_name")
-        return v
+    @model_validator(mode='after')
+    def check_at_least_one_identifier(self) -> 'TargetExtractionOutput':
+        """Ensure we have at least a gene name, protein name, PDB ID, or UniProt ID."""
+        if not self.gene_name and not self.protein_name and not self.pdb_id and not self.uniprot_id:
+            raise ValueError("Must have either gene_name, protein_name, pdb_id, or uniprot_id")
+        return self
+
+class QueryRefinementSuggestion(BaseModel):
+    """
+    Structured output for query refinement when no structures are found.
+    Provides user-friendly guidance and alternative query suggestions.
+    """
+    explanation: str = Field(
+        ...,
+        description="Clear explanation of why no results were found (2-3 sentences)"
+    )
+    suggestions: List[str] = Field(
+        ...,
+        description="2-3 alternative query formulations that might work better",
+        min_items=1,
+        max_items=5
+    )
+    known_complexes: Optional[List[str]] = Field(
+        None,
+        description="Known complexes for this target if applicable"
+    )
+    target_characteristics: Optional[str] = Field(
+        None,
+        description="Brief note about the target type (e.g., 'peptidyl-prolyl isomerase with limited inhibitors')"
+    )
+    confidence: float = Field(
+        ...,
+        description="Confidence in the suggestions (0-1)",
+        ge=0.0,
+        le=1.0
+    )
 
 
 # ============================================================================

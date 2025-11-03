@@ -49,11 +49,87 @@ def structure_resolver_node(state: DrugDiscoveryState) -> Dict[str, Any]:
     uniprot_id = target_info.get("uniprot_id")
     sequence = target_info.get("sequence")
     
+    # If we don't have a sequence but have a UniProt ID, fetch it
+    if not sequence and uniprot_id:
+        logger.info(f"No sequence available, fetching from UniProt for {uniprot_id}")
+        from fade.tools.uniprot_api import get_uniprot_client
+        uniprot_client = get_uniprot_client()
+        sequence = uniprot_client.get_protein_sequence(uniprot_id)
+        if sequence:
+            target_info["sequence"] = sequence
+            target_info["sequence_length"] = len(sequence)
+            logger.info(f"Fetched sequence: {len(sequence)} amino acids")
+    
     if not sequence:
+        # Check if protein_name might be a UniProt ID (like A0A1L1T3F0)
+        protein_name = target_info.get("protein_name")
+        if protein_name and (len(protein_name) == 6 or len(protein_name) == 10 or "_" in protein_name):
+            # Looks like a UniProt ID pattern
+            logger.info(f"Protein name '{protein_name}' looks like a UniProt ID, trying to fetch sequence")
+            from fade.tools.uniprot_api import get_uniprot_client
+            uniprot_client = get_uniprot_client()
+            sequence = uniprot_client.get_protein_sequence(protein_name)
+            if sequence:
+                target_info["uniprot_id"] = protein_name
+                target_info["sequence"] = sequence
+                target_info["sequence_length"] = len(sequence)
+                logger.info(f"Successfully fetched sequence for {protein_name}: {len(sequence)} amino acids")
+    
+    if not sequence:
+        # Try to dynamically resolve UniProt ID and fetch sequence
+        gene_name = target_info.get("gene_name")
+        if gene_name:
+            logger.info(f"Dynamically resolving UniProt ID for gene: {gene_name}")
+            from fade.agents.research.uniprot_resolver import resolve_uniprot_id_dynamically
+            from fade.tools.uniprot_api import get_uniprot_client
+            
+            # Use dynamic resolution - NO HARDCODED MAPPINGS
+            resolved_uniprot_id = resolve_uniprot_id_dynamically(target_info)
+            
+            if resolved_uniprot_id:
+                uniprot_client = get_uniprot_client()
+                sequence = uniprot_client.get_protein_sequence(resolved_uniprot_id)
+                if sequence:
+                    target_info["uniprot_id"] = resolved_uniprot_id
+                    target_info["sequence"] = sequence
+                    target_info["sequence_length"] = len(sequence)
+                    logger.info(f"Dynamically resolved {gene_name} → {resolved_uniprot_id}: {len(sequence)} amino acids")
+    
+    if not sequence:
+        # Generate intelligent guidance for the user
+        logger.info("Generating guidance for UniProt lookup failure")
+        
+        from fade.agents.structure.uniprot_guidance import (
+            generate_uniprot_guidance,
+            format_uniprot_guidance_message
+        )
+        
+        # Determine what failed
+        protein_name = target_info.get("protein_name", "")
+        gene_name = target_info.get("gene_name", "")
+        uniprot_id = target_info.get("uniprot_id", "")
+        
+        # The ID that failed to resolve
+        failed_id = uniprot_id or protein_name or gene_name or "unknown"
+        
+        # Generate guidance
+        guidance = generate_uniprot_guidance(
+            query=state.get("query", "Unknown query"),
+            uniprot_id=failed_id,
+            error_type="not_found" if not uniprot_id else "no_sequence"
+        )
+        
+        # Format the message
+        guidance_message = format_uniprot_guidance_message(guidance)
+        
+        # Return with guidance instead of hard failure
         return {
-            "error": "No protein sequence available",
+            "error": guidance_message,
+            "error_type": "uniprot_not_found",
+            "guidance": guidance,
+            "suggested_queries": guidance.get("suggestions", []),
             "should_continue": False,
-            "current_step": "structure_failed"
+            "current_step": "structure_failed_with_guidance"
         }
     
     logger.info(f"[Structure Resolver] Finding structure for {uniprot_id}")
@@ -87,13 +163,9 @@ def structure_resolver_node(state: DrugDiscoveryState) -> Dict[str, Any]:
                     "current_step": "structure_found",
                     "should_continue": True
                 }
-        else:
-            # NO FALLBACK - Must have drug-like ligands
-            return {
-                "error": "No PDB structures with drug-like ligands found. Try a more specific query like 'TARGET_NAME kinase domain with inhibitor' or 'TARGET_NAME with DRUG_NAME'",
-                "should_continue": False,
-                "current_step": "structure_failed"
-            }
+    
+    # If no PDB structures or couldn't download, continue to AlphaFold
+    logger.info("No PDB structures available, checking AlphaFold database")
     
     # Option 2: Try AlphaFold database
     if uniprot_id:

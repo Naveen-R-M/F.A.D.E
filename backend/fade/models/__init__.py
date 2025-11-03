@@ -5,6 +5,7 @@ Models package for F.A.D.E structured outputs.
 from .structured_outputs import (
     # Research models
     TargetExtractionOutput,
+    QueryRefinementSuggestion,
     
     # Structure models
     StructureSelectionOutput,
@@ -27,8 +28,17 @@ from .structured_outputs import (
     QueryClassification
 )
 
+from .guidance import (
+    # Enhanced guidance models
+    QueryRefinementSuggestion as EnhancedQueryRefinement,
+    TargetClassification,
+    SearchMetadata,
+    UserGuidance
+)
+
 __all__ = [
     "TargetExtractionOutput",
+    "QueryRefinementSuggestion",
     "StructureSelectionOutput",
     "PocketRankingOutput",
     "MoleculeDesignStrategy",
@@ -36,5 +46,9 @@ __all__ = [
     "BindingPredictionOutput",
     "DrugCandidateAnalysis",
     "FinalReportSummary",
-    "QueryClassification"
+    "QueryClassification",
+    "EnhancedQueryRefinement",
+    "TargetClassification",
+    "SearchMetadata",
+    "UserGuidance"
 ]

@@ -57,3 +57,54 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Add this to your main CSS file */
+
+.markdown-content {
+  /* This ensures child elements are styled correctly */
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem; /* 8px spacing between elements */
+}
+
+/* Headings (like ## 🎯 Target Identified) */
+.markdown-content h2,
+.markdown-content h3 {
+  font-size: 1.1rem; /* 1.1x the base size */
+  font-weight: 600; /* Semibold */
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2); /* A faint line under headings */
+  margin-bottom: 0.25rem; /* 4px */
+}
+
+/* Bulleted Lists (like * **Protein:** EGFR) */
+.markdown-content ul {
+  list-style-type: disc;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem; /* 4px spacing between list items */
+}
+
+/* Blockquotes (like > **Conclusion:** ...) */
+.markdown-content blockquote {
+  border-left: 3px solid rgba(255, 255, 255, 0.4);
+  padding-left: 12px;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Bold text */
+.markdown-content strong {
+  font-weight: 600;
+  color: #ffffff;
+}
+
+/* Code (like `2ITV`) */
+.markdown-content code {
+  background-color: rgba(0, 0, 0, 0.3);
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.9em;
+}

@@ -7,6 +7,8 @@ import { useChat, Role } from '@/components/context/ChatContext';
 import { getSessionId } from '@/components/utils/session';
 import { cn } from '@/components/utils/cn';
 import AnimatedOrb from './AnimatedOrb';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const MODEL_GRADIENT: Record<string, string> = {
     'gemini-2.5-pro': 'bg-gradient-to-br from-sky-400 to-blue-600',
@@ -90,7 +92,7 @@ export default function ChatUI() {
                     const data = await response.json();
                     console.log('✅ Backend is online:', data);
                     setBackendStatus('online');
-                    
+
                     // Show success message briefly on first connection
                     if (backendStatus !== 'online') {
                         setShowSuccessMessage(true);
@@ -99,7 +101,7 @@ export default function ChatUI() {
                             setShowSuccessMessage(false);
                         }, 3000);
                     }
-                    
+
                     // Optional: Show backend version or status
                     if (data.hello) {
                         console.log('📡 Backend message:', data.hello);
@@ -165,7 +167,7 @@ export default function ChatUI() {
 
         // Add user message
         appendMessage({ role: 'user', content: query });
-        
+
         // Create thinking message
         const thinkingMsg: MessageWithDetails = {
             role: 'assistant',
@@ -187,7 +189,7 @@ export default function ChatUI() {
             // Use fetch with SSE parsing
             const response = await fetch(`${BACKEND_URL.replace(/\/$/, '')}/chat-stream`, {
                 method: 'POST',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(requestBody),
@@ -218,10 +220,10 @@ export default function ChatUI() {
                         // Parse SSE event
                         const eventType = line.slice(6).trim();
                         const nextLine = lines[lines.indexOf(line) + 1];
-                        
+
                         if (nextLine?.startsWith('data:')) {
                             const dataStr = nextLine.slice(5).trim();
-                            
+
                             if (dataStr && dataStr !== '{}') {
                                 try {
                                     const data = JSON.parse(dataStr);
@@ -291,7 +293,7 @@ export default function ChatUI() {
                 // Final summary - replace thinking bubble with final message
                 setIsThinking(false);
                 setCurrentThinkingMessage(null);
-                
+
                 // Add final message with all details stored
                 appendMessage({
                     role: 'assistant',
@@ -318,7 +320,7 @@ export default function ChatUI() {
                     // If still thinking and we get done, show what we have
                     setIsThinking(false);
                     setCurrentThinkingMessage(null);
-                    
+
                     if (thinkingMsg.details && thinkingMsg.details.length > 0) {
                         appendMessage({
                             role: 'assistant',
@@ -389,8 +391,8 @@ export default function ChatUI() {
                             <EnhancedBubble key={i} message={msg as MessageWithDetails} />
                         ))}
                         {currentThinkingMessage && (
-                            <ThinkingBubble 
-                                currentStep={currentThinkingMessage.currentStep || 'Processing...'} 
+                            <ThinkingBubble
+                                currentStep={currentThinkingMessage.currentStep || 'Processing...'}
                                 details={currentThinkingMessage.details}
                             />
                         )}
@@ -404,11 +406,11 @@ export default function ChatUI() {
                 onSend={onSend}
                 disabled={isThinking || backendStatus === 'offline'}
                 placeholder={
-                    backendStatus === 'offline' 
+                    backendStatus === 'offline'
                         ? "Server is offline - waiting for connection..."
-                        : isThinking 
-                        ? "F.A.D.E is thinking..." 
-                        : "Ask about proteins, drugs, or diseases..."
+                        : isThinking
+                            ? "F.A.D.E is thinking..."
+                            : "Ask about proteins, drugs, or diseases..."
                 }
             />
 
@@ -453,18 +455,22 @@ function EnhancedBubble({ message }: { message: MessageWithDetails }) {
         <div className="flex justify-start">
             <div className="max-w-[85%] space-y-2">
                 <div className="rounded-2xl bg-white/7 px-4 py-3 text-sm leading-relaxed text-white border border-white/10">
-                    <MarkdownText text={message.content} />
-                    
+                    <div className="markdown-content">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {message.content}
+                        </ReactMarkdown>
+                    </div>
+
                     {hasDetails && (
                         <button
                             onClick={() => setShowDetails(!showDetails)}
                             className="mt-3 flex items-center gap-2 text-xs text-white/60 hover:text-white/80 transition-colors"
                         >
-                            <svg 
+                            <svg
                                 className={cn("h-3 w-3 transition-transform", showDetails && "rotate-90")}
-                                viewBox="0 0 24 24" 
-                                fill="none" 
-                                stroke="currentColor" 
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
                                 strokeWidth="2"
                             >
                                 <path d="M9 18l6-6-6-6" />
@@ -499,13 +505,13 @@ function EnhancedBubble({ message }: { message: MessageWithDetails }) {
 }
 
 // Rest of the helper components remain the same
-function ChatBar({ 
-    value, 
-    onInput, 
-    onSend, 
+function ChatBar({
+    value,
+    onInput,
+    onSend,
     disabled,
-    placeholder 
-}: { 
+    placeholder
+}: {
     value: string;
     onInput: (v: string) => void;
     onSend: () => void;
@@ -594,31 +600,6 @@ function Bubble({ role, text }: { role: Role; text: string }) {
             )}>
                 <span>{text}</span>
             </div>
-        </div>
-    );
-}
-
-function MarkdownText({ text }: { text: string }) {
-    // Simple markdown parsing for **bold** and line breaks
-    const parts = text.split(/(\*\*[^*]+\*\*)/g);
-
-    return (
-        <div className="space-y-2">
-            {parts.map((part, index) => {
-                if (part.startsWith('**') && part.endsWith('**')) {
-                    return (
-                        <span key={index} className="font-semibold">
-                            {part.slice(2, -2)}
-                        </span>
-                    );
-                } else {
-                    return part.split('\n').map((line, lineIndex) => (
-                        <div key={`${index}-${lineIndex}`}>
-                            {line}
-                        </div>
-                    ));
-                }
-            })}
         </div>
     );
 }

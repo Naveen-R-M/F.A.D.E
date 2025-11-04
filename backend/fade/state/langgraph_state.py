@@ -45,3 +45,9 @@ class DrugDiscoveryState(TypedDict):
     final_report: NotRequired[Optional[str]]
     
     error: NotRequired[Optional[str]]
+    is_continuation: NotRequired[Optional[bool]]  # Flag for continuation queries
+    routing_decision: NotRequired[Optional[str]]  # For entry router to specify next node
+    
+    # For intelligent guidance on failures
+    guidance: NotRequired[Optional[str]]
+    suggested_queries: NotRequired[Optional[List[str]]]

@@ -19,8 +19,7 @@ from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
 # Use the simplified research nodes
 from fade.agents.research.langgraph_nodes_simplified import (
-    target_research_node, 
-    validate_target_node
+    target_research_node
 )
 
 from fade.agents.structure.langgraph_nodes import (
@@ -41,6 +40,163 @@ from fade.utils import get_logger
 
 logger = get_logger("workflow.drug_discovery")
 
+def entry_router_node(state: DrugDiscoveryState) -> Dict[str, Any]:
+    """
+    Entry router that decides where to start in the graph based on the query and state.
+    For continuations, it routes to the appropriate node instead of always starting at research.
+    """
+    query = state.get("query", "")
+    is_continuation = state.get("is_continuation", False)
+    
+    logger.info(f"[Entry Router] Query: {query[:100]}...")
+    logger.info(f"[Entry Router] Is continuation: {is_continuation}")
+    
+    if is_continuation:
+        # Check what we have in state
+        has_target = state.get("target_info") is not None
+        has_structure = state.get("structure") is not None
+        has_pockets = state.get("pockets") is not None or state.get("selected_pocket") is not None
+        
+        logger.info(f"[Entry Router] State check - Target: {has_target}, Structure: {has_structure}, Pockets: {has_pockets}")
+        
+        query_lower = query.lower()
+        
+        # Route based on query intent and available state
+        if "properties" in query_lower or "physicochemical" in query_lower:
+            logger.info("[Entry Router] Detected property analysis request")
+            # Property analysis request
+            if not has_target:
+                logger.info("[Entry Router] No target info - cannot do property analysis")
+                return {
+                    "messages": [HumanMessage(content="I need target information first. Please specify a protein target.")],
+                    "should_continue": False
+                }
+            # We have target, provide helpful guidance
+            target_info = state['target_info']
+            logger.info(f"[Entry Router] Target info keys: {list(target_info.keys()) if isinstance(target_info, dict) else 'not a dict'}")
+            
+            # Try different fields to get the best display name
+            display_name = (target_info.get('protein_name') or 
+                          target_info.get('gene_name') or 
+                          target_info.get('name') or 
+                          'the target')
+            uniprot_id = target_info.get('uniprot_id', 'Unknown')
+            seq_length = target_info.get('sequence_length', 'Unknown')
+            
+            message = f"""I understand you want to analyze the physicochemical properties of {display_name} (UniProt: {uniprot_id}).
+
+Here's what we know about {display_name}:
+- Protein: {display_name}
+- UniProt ID: {uniprot_id}
+- Sequence length: {seq_length} amino acids"""
+            
+            if target_info.get('existing_structures'):
+                message += f"\n- Available PDB structures: {len(target_info['existing_structures'])} structures found"
+            
+            message += f"""
+
+Note: Direct physicochemical property analysis of the protein target is currently under development.
+
+However, I can help you with:
+1. **Structure Analysis**: Load and analyze 3D structures from PDB
+2. **Pocket Detection**: Identify and characterize binding pockets  
+3. **Molecule Generation**: Generate small molecules with specific physicochemical properties
+4. **Lead Optimization**: Design molecules with desired ADMET properties
+
+What would you like to explore? For example:
+- "Find binding pockets for {display_name}"
+- "Load structure for {display_name}"
+- "Generate molecules for {display_name}"
+"""
+            
+            logger.info(f"[Entry Router] Providing property analysis guidance for {display_name}")
+            
+            return {
+                "messages": [HumanMessage(content=message)],
+                "should_continue": False,
+                "current_step": "guidance_provided"
+            }
+        
+        elif "pocket" in query_lower or "binding site" in query_lower:
+            # Pocket analysis request
+            if not has_structure:
+                logger.info("[Entry Router] Pocket request but no structure - routing to structure resolver")
+                return {"routing_decision": "structure_resolver"}
+            else:
+                logger.info("[Entry Router] Pocket request with structure - routing to pocket mapper")
+                return {"routing_decision": "pocket_mapper"}
+        
+        elif "structure" in query_lower or "pdb" in query_lower:
+            # Structure request
+            logger.info("[Entry Router] Structure request - routing to structure resolver")
+            return {"routing_decision": "structure_resolver"}
+        
+        elif "molecule" in query_lower or "generate" in query_lower:
+            # Molecule generation request
+            if not has_pockets:
+                if not has_structure:
+                    logger.info("[Entry Router] Molecule gen but no structure - routing to structure resolver")
+                    return {"routing_decision": "structure_resolver"}
+                else:
+                    logger.info("[Entry Router] Molecule gen but no pockets - routing to pocket mapper")
+                    return {"routing_decision": "pocket_mapper"}
+            else:
+                logger.info("[Entry Router] Molecule gen with pockets - would route to molecule generator")
+                return {
+                    "messages": [HumanMessage(content="Molecule generation is coming soon!")],
+                    "should_continue": False
+                }
+        
+        else:
+            # Generic continuation - provide context-aware guidance
+            if has_target:
+                target_name = state['target_info'].get('protein_name') or state['target_info'].get('gene_name', 'your target')
+                return {
+                    "messages": [HumanMessage(content=(
+                        f"I can help you continue working with {target_name}:\n"
+                        "- Find and analyze 3D structures\n"
+                        "- Detect binding pockets\n" 
+                        "- Generate drug-like molecules\n\n"
+                        "Please specify what you'd like to do."
+                    ))],
+                    "should_continue": False
+                }
+            else:
+                return {
+                    "messages": [HumanMessage(content=(
+                        "I can help you with:\n"
+                        "- Finding structures for your target\n"
+                        "- Detecting binding pockets\n"
+                        "- Generating drug-like molecules\n\n"
+                        "Please specify what you'd like to do."
+                    ))],
+                    "should_continue": False
+                }
+    
+    else:
+        # New query - start from target research
+        logger.info("[Entry Router] New query - routing to target research")
+        return {"routing_decision": "target_research"}
+
+def route_from_entry(state: DrugDiscoveryState) -> str:
+    """
+    Routing function for the entry router.
+    """
+    # Check if we should stop (for guidance messages)
+    if not state.get("should_continue", True):
+        logger.info("[Entry Router] should_continue=False, ending")
+        return "guidance"
+    
+    # Check for explicit routing decision
+    routing = state.get("routing_decision")
+    if routing:
+        logger.info(f"[Entry Router] Routing to: {routing}")
+        return routing
+    
+    # Default to research for new queries
+    logger.info("[Entry Router] No explicit routing, defaulting to target_research")
+    return "target_research"
+
 async def create_drug_discovery_graph():
     """
     Create the LangGraph workflow for drug discovery.
@@ -55,7 +211,7 @@ async def create_drug_discovery_graph():
     
     # Add nodes for each step
     workflow.add_node("target_research", target_research_node)
-    workflow.add_node("validate_target", validate_target_node)
+    # workflow.add_node("validate_target", validate_target_node)  # Not implemented yet
     workflow.add_node("structure_resolver", structure_resolver_node)
     workflow.add_node("structure_wait", structure_wait_node)
     workflow.add_node("pocket_mapper", pocket_mapper_node)
@@ -68,28 +224,44 @@ async def create_drug_discovery_graph():
     # workflow.add_node("boltz2_screener", boltz2_screener_node)
     # workflow.add_node("results_analyzer", results_analyzer_node)
 
-    # Define the edges (workflow sequence)
-    workflow.set_entry_point("target_research")
+    # Add a router node that decides where to start based on the query
+    workflow.add_node("entry_router", entry_router_node)
     
-    # Research -> Validation
+    # Define the edges (workflow sequence)
+    workflow.set_entry_point("entry_router")
+    
+    # Entry router decides where to go
     workflow.add_conditional_edges(
-        "target_research",
-        should_continue_research,
+        "entry_router",
+        route_from_entry,
         {
-            "continue": "validate_target",
+            "target_research": "target_research",
+            "structure_resolver": "structure_resolver",
+            "pocket_mapper": "pocket_mapper",
+            "guidance": END,
             "end": END
         }
     )
     
-    # Validation -> Structure
+    # Research -> Structure (skipping validation for now)
     workflow.add_conditional_edges(
-        "validate_target",
-        should_continue_validation,
+        "target_research",
+        should_continue_research,
         {
             "continue": "structure_resolver",
             "end": END
         }
     )
+    
+    # # Validation -> Structure (commented out until validate_target is implemented)
+    # workflow.add_conditional_edges(
+    #     "validate_target",
+    #     should_continue_validation,
+    #     {
+    #         "continue": "structure_resolver",
+    #         "end": END
+    #     }
+    # )
     
     # Structure Resolver -> Pocket from Ligand (Holo) or Pocket Mapping (Apo)
     workflow.add_conditional_edges(
@@ -180,7 +352,8 @@ async def create_drug_discovery_graph():
 def should_continue_research(state: DrugDiscoveryState) -> str:
     """Determine if we should continue after research."""
     if state.get("error") or not state.get("should_continue", True):
-        logger.warning(f"Research failed: {state.get('error')}")
+        if state.get("error"):
+            logger.warning(f"Research failed: {state.get('error')}")
         return "end"
     
     if not state.get("target_info"):

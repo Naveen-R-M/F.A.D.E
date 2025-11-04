@@ -47,6 +47,20 @@ def target_research_node(state: DrugDiscoveryState) -> Dict[str, Any]:
     query = state["query"]
     logger.info(f"[Research Node] Processing query: {query}")
     
+    # The entry router should handle continuations, so if we're here with a continuation,
+    # something went wrong with the routing
+    if state.get("is_continuation"):
+        logger.warning("[Research Node] Continuation query reached research node - this shouldn't happen!")
+        # Still handle it gracefully
+        if state.get("target_info"):
+            target_name = state['target_info'].get('protein_name', 'the target')
+            return {
+                "messages": [HumanMessage(content=f"Continuing with {target_name}. Using existing target information.")],
+                "should_continue": True
+            }
+    
+    # Normal research for new queries
+    
     # Initialize LLM for parsing - NO FALLBACK
     llm = get_llm_client()
     

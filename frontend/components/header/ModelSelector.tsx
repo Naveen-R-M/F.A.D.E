@@ -4,8 +4,7 @@ import { useModel, ModelId } from '@/components/context/ModelContext';
 const OPTIONS: { id: ModelId; label: string }[] = [
   { id: 'gemini-2.5-pro',  label: 'Gemini 2.5 Pro' },
   { id: 'gemini-2.5-flash',  label: 'Gemini 2.5 Flash' },
-  { id: 'gemini-2.5-flash-lite',  label: 'Gemini 2.5 Flash Lite' },
-  { id: 'local',   label: 'Local' },
+  { id: 'gemini-2.5-flash-lite',  label: 'Gemini 2.5 Flash Lite' }
 ];
 
 export default function ModelSelector() {

@@ -12,7 +12,6 @@ const MODEL_GRADIENT: Record<string, string> = {
     'gemini-2.5-pro': 'bg-gradient-to-br from-sky-400 to-blue-600',
     'gemini-2.5-flash': 'bg-gradient-to-br from-fuchsia-400 to-purple-600',
     'gemini-2.5-flash-lite': 'bg-gradient-to-br from-emerald-400 to-teal-600',
-    'local': 'bg-gradient-to-br from-amber-400 to-orange-600',
 };
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;

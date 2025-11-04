@@ -41,6 +41,8 @@ export default function ChatUI() {
     const { conversations, active, activeId, createConversation, appendMessage } = useChat();
     const sessionId = getSessionId();
     const [pendingJobQuery, setPendingJobQuery] = useState<string | null>(null);
+    const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+    const [showSuccessMessage, setShowSuccessMessage] = useState(true);
 
     // Initialize conversation
     const bootRef = useRef(false);
@@ -65,6 +67,63 @@ export default function ChatUI() {
     useEffect(() => {
         listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' });
     }, [active?.messages?.length, isThinking, currentThinkingMessage?.currentStep]);
+
+    // Backend health check on mount
+    useEffect(() => {
+        const checkBackendHealth = async () => {
+            if (!BACKEND_URL) {
+                console.error('❌ Backend URL not configured');
+                setBackendStatus('offline');
+                return;
+            }
+
+            try {
+                console.log('🏥 Checking backend health...');
+                const response = await fetch(`${BACKEND_URL.replace(/\/$/, '')}/`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('✅ Backend is online:', data);
+                    setBackendStatus('online');
+                    
+                    // Show success message briefly on first connection
+                    if (backendStatus !== 'online') {
+                        setShowSuccessMessage(true);
+                        // Hide success message after 3 seconds
+                        setTimeout(() => {
+                            setShowSuccessMessage(false);
+                        }, 3000);
+                    }
+                    
+                    // Optional: Show backend version or status
+                    if (data.hello) {
+                        console.log('📡 Backend message:', data.hello);
+                    }
+                } else {
+                    console.error('⚠️ Backend returned error:', response.status);
+                    setBackendStatus('offline');
+                }
+            } catch (error) {
+                console.error('❌ Backend is offline:', error);
+                setBackendStatus('offline');
+            }
+        };
+
+        // Run health check on mount
+        checkBackendHealth();
+
+        // Optional: Set up periodic health checks every 30 seconds
+        const interval = setInterval(checkBackendHealth, 30000);
+
+        return () => {
+            clearInterval(interval);
+        };
+    }, []);
 
     // Cleanup SSE on unmount
     useEffect(() => {
@@ -284,6 +343,23 @@ export default function ChatUI() {
 
     return (
         <div className="relative space-y-4">
+            {/* Backend Status Indicator */}
+            {backendStatus === 'offline' && (
+                <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-2 text-sm text-red-400">
+                    ⚠️ Server Offline.
+                </div>
+            )}
+            {backendStatus === 'checking' && (
+                <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/30 px-4 py-2 text-sm text-yellow-400">
+                    🔄 Connecting Server...
+                </div>
+            )}
+            {backendStatus === 'online' && showSuccessMessage && (
+                <div className="rounded-lg bg-green-500/10 border border-green-500/30 px-4 py-2 text-sm text-green-400 animate-fade-in">
+                    ✅ Online
+                </div>
+            )}
+            
             <div className="h-[60vh] w-full space-y-2 overflow-y-auto rounded-xl" ref={listRef}>
                 {!active || active.messages.length === 0 ? (
                     <>
@@ -343,14 +419,21 @@ export default function ChatUI() {
                 value={input}
                 onInput={setInput}
                 onSend={onSend}
-                disabled={isThinking}
-                placeholder={isThinking ? "F.A.D.E is thinking..." : "Ask about proteins, drugs, or diseases..."}
+                disabled={isThinking || backendStatus === 'offline'}
+                placeholder={
+                    backendStatus === 'offline' 
+                        ? "Server is offline - waiting for connection..."
+                        : isThinking 
+                        ? "F.A.D.E is thinking..." 
+                        : "Ask about proteins, drugs, or diseases..."
+                }
             />
 
             <StatusBar
                 count={conversations.length}
                 modelLabel={model}
                 onNew={handleNewConversation}
+                backendStatus={backendStatus}
             />
         </div>
     );
@@ -478,11 +561,26 @@ function ChatBar({
     );
 }
 
-function StatusBar({ count, modelLabel, onNew }: { count: number; modelLabel: string; onNew: () => void }) {
+function StatusBar({ count, modelLabel, onNew, backendStatus }: { count: number; modelLabel: string; onNew: () => void; backendStatus: 'checking' | 'online' | 'offline' }) {
     return (
         <div className="flex items-center justify-between text-xs text-white/60">
-            <div>
-                Conversations: <span className="text-white">{count}</span> · Engine: <span className="text-white">{modelLabel}</span>
+            <div className="flex items-center gap-3">
+                <div>
+                    Conversations: <span className="text-white">{count}</span> · Engine: <span className="text-white">{modelLabel}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                    <span className={cn(
+                        "inline-block h-2 w-2 rounded-full",
+                        backendStatus === 'online' && "bg-green-400",
+                        backendStatus === 'offline' && "bg-red-400",
+                        backendStatus === 'checking' && "bg-yellow-400 animate-pulse"
+                    )} />
+                    <span className="text-xs">
+                        {backendStatus === 'online' && 'Connected'}
+                        {backendStatus === 'offline' && 'Offline'}
+                        {backendStatus === 'checking' && 'Connecting'}
+                    </span>
+                </div>
             </div>
             <button
                 type="button"

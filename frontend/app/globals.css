@@ -17,6 +17,10 @@
   .animate-pulse-glow { animation: pulse-glow 2.8s ease-in-out infinite; }
   .animate-float      { animation: float 4.5s ease-in-out infinite; }
   .animate-spin-slow  { animation: spin-slower 10s linear infinite; }
+  
+  /* Animation delays for thinking bubble dots */
+  .animation-delay-150 { animation-delay: 150ms; }
+  .animation-delay-300 { animation-delay: 300ms; }
 }
 
 :root {

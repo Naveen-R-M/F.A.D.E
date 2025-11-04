@@ -1,6 +1,6 @@
-// components/chat/ChatUI.tsx - Updated to connect with F.A.D.E Gateway
+// components/chat/ChatUI.tsx - Enhanced with SSE and dynamic updates
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useModel } from '@/components/context/ModelContext';
 import { useJobs } from '@/components/context/JobsContext';
 import { useChat, Role } from '@/components/context/ChatContext';
@@ -9,24 +9,31 @@ import { cn } from '@/components/utils/cn';
 import AnimatedOrb from './AnimatedOrb';
 
 const MODEL_GRADIENT: Record<string, string> = {
-    'gpt-4o': 'bg-gradient-to-br from-sky-400 to-blue-600',
-    'gpt-4.1': 'bg-gradient-to-br from-fuchsia-400 to-purple-600',
-    'gpt-3.5': 'bg-gradient-to-br from-emerald-400 to-teal-600',
+    'gemini-2.5-pro': 'bg-gradient-to-br from-sky-400 to-blue-600',
+    'gemini-2.5-flash': 'bg-gradient-to-br from-fuchsia-400 to-purple-600',
+    'gemini-2.5-flash-lite': 'bg-gradient-to-br from-emerald-400 to-teal-600',
     'local': 'bg-gradient-to-br from-amber-400 to-orange-600',
 };
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
-interface GatewayResponse {
-    type: 'chat' | 'job' | 'consent_required' | 'error';
-    message?: string;
-    job_id?: string;
-    status?: string;
-    reasoning?: string;
-    confidence?: number;
-    error?: string;
-    call_to_action?: string;
-    job_preview?: any;
+interface StreamEvent {
+    type: 'metadata' | 'message' | 'status' | 'error' | 'summary' | 'done';
+    content?: string;
+    step?: string;
+    node?: string;
+    error?: string | null;
+    session_id?: string;
+    intent?: string;
+    state?: any;
+}
+
+interface MessageWithDetails {
+    role: Role;
+    content: string;
+    details?: StreamEvent[];
+    isThinking?: boolean;
+    currentStep?: string;
 }
 
 export default function ChatUI() {
@@ -51,24 +58,40 @@ export default function ChatUI() {
 
     const [input, setInput] = useState('');
     const [isThinking, setIsThinking] = useState(false);
+    const [currentThinkingMessage, setCurrentThinkingMessage] = useState<MessageWithDetails | null>(null);
     const listRef = useRef<HTMLDivElement>(null);
+    const eventSourceRef = useRef<EventSource | null>(null);
 
     // Auto-scroll
     useEffect(() => {
         listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' });
-    }, [active?.messages.length, isThinking]);
+    }, [active?.messages?.length, isThinking, currentThinkingMessage?.currentStep]);
+
+    // Cleanup SSE on unmount
+    useEffect(() => {
+        return () => {
+            if (eventSourceRef.current) {
+                eventSourceRef.current.close();
+            }
+        };
+    }, []);
 
     function handleNewConversation() {
         setInput('');
         setIsThinking(false);
+        setCurrentThinkingMessage(null);
         setPendingJobQuery(null);
+        if (eventSourceRef.current) {
+            eventSourceRef.current.close();
+            eventSourceRef.current = null;
+        }
         createConversation({
             model,
             greeting: 'Hi! I\'m F.A.D.E, your AI drug discovery assistant. What can I help you discover today?'
         });
     }
 
-    async function handleGatewayRequest(query: string, withConsent: boolean = false) {
+    async function handleSSERequest(query: string) {
         if (!BACKEND_URL) {
             appendMessage({
                 role: 'assistant',
@@ -77,325 +100,389 @@ export default function ChatUI() {
             return;
         }
 
-        const requestPayload = {
-            id: crypto.randomUUID(),
-            query: query,
-            user_id: sessionId,
-            consent_given: withConsent
+        // Close any existing SSE connection
+        if (eventSourceRef.current) {
+            eventSourceRef.current.close();
+        }
+
+        // Add user message
+        appendMessage({ role: 'user', content: query });
+        
+        // Create thinking message
+        const thinkingMsg: MessageWithDetails = {
+            role: 'assistant',
+            content: '',
+            isThinking: true,
+            currentStep: 'Initializing...',
+            details: []
         };
+        setCurrentThinkingMessage(thinkingMsg);
+        setIsThinking(true);
 
         try {
-            console.log('📤 Sending to unified API:', requestPayload);
+            const requestBody = {
+                query: query,
+                user_id: sessionId,
+                session_id: sessionId  // Add session_id for proper session tracking
+            };
 
-            // Use the NEW unified endpoint
-            const response = await fetch(`${BACKEND_URL.replace(/\/$/, '')}/api/query`, {
+            // Use fetch with SSE parsing
+            const response = await fetch(`${BACKEND_URL.replace(/\/$/, '')}/chat-stream`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestPayload),
+                headers: { 
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestBody),
             });
 
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`API error: ${response.status} ${response.statusText} - ${errorText}`);
+                throw new Error(`API error: ${response.status}`);
             }
 
-            const result: GatewayResponse = await response.json();
-            console.log('📥 API response:', result);
+            const reader = response.body?.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
 
-            if (result.type === 'chat') {
-                // Display chat response directly
-                let message = result.message || 'I received your question but couldn\'t generate a response.';
-
-                // Add confidence indicator if available
-                if (result.confidence && result.confidence < 0.8) {
-                    message += `\n\n*Note: I'm ${Math.round(result.confidence * 100)}% confident about this response.*`;
-                }
-
-                appendMessage({
-                    role: 'assistant',
-                    content: message
-                });
-
-            } else if (result.type === 'consent_required') {
-                // Handle consent request for job submission
-                let consentMessage = result.message || 'I can help with that drug discovery task.';
-                consentMessage += '\n\n' + (result.call_to_action || 'Would you like me to submit this job?');
-
-                if (result.job_preview) {
-                    consentMessage += '\n\n**Job Details:**';
-                    if (result.job_preview.estimated_time) {
-                        consentMessage += `\n• Estimated time: ${result.job_preview.estimated_time}`;
-                    }
-                    if (result.job_preview.computational_resources) {
-                        consentMessage += `\n• Resources: ${result.job_preview.computational_resources}`;
-                    }
-                    if (result.job_preview.pipeline_stages && Array.isArray(result.job_preview.pipeline_stages)) {
-                        consentMessage += '\n\n**Pipeline Stages:**';
-                        result.job_preview.pipeline_stages.forEach((stage: string) => {
-                            consentMessage += `\n• ${stage}`;
-                        });
-                    }
-                }
-
-                consentMessage += '\n\nReply with "yes" to proceed or ask me something else.';
-
-                appendMessage({
-                    role: 'assistant',
-                    content: consentMessage
-                });
-
-                // Store the query for potential resubmission with consent
-                setPendingJobQuery(query);
-
-            } else if (result.type === 'job') {
-                // Handle job submission confirmation
-                const jobId = result.job_id!;
-                const jobData = {
-                    id: jobId,
-                    query: query,
-                    status: result.status || 'submitted',
-                    user_id: sessionId,
-                    model: model,
-                    current_time: new Date().toISOString()
-                };
-
-                // Add to job queue
-                addJob(jobData as any);
-
-                // Show job confirmation in chat
-                let jobMessage = `🚀 **Drug Discovery Pipeline Started!**\n\n`;
-                jobMessage += `**Job ID:** ${jobId.slice(0, 8)}...\n`;
-                jobMessage += `**Status:** ${result.status}\n`;
-                jobMessage += `**Query:** "${query}"\n\n`;
-
-                if (result.message) {
-                    jobMessage += result.message + '\n\n';
-                }
-
-                jobMessage += `You can monitor progress in the "In Progress" tab.`;
-
-                appendMessage({
-                    role: 'assistant',
-                    content: jobMessage
-                });
-
-                // Start monitoring job status
-                monitorJobStatus(jobId);
-
-            } else if (result.type === 'error') {
-                // Handle errors
-                appendMessage({
-                    role: 'assistant',
-                    content: `❌ Sorry, I encountered an error: ${result.message || result.error || 'Unknown error'}`
-                });
-            } else {
-                // Unknown response type
-                console.warn('Unknown response type:', result);
-                appendMessage({
-                    role: 'assistant',
-                    content: `I received an unexpected response. Please try again or rephrase your question.`
-                });
+            if (!reader) {
+                throw new Error('No response body');
             }
 
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    if (line.startsWith('event:')) {
+                        // Parse SSE event
+                        const eventType = line.slice(6).trim();
+                        const nextLine = lines[lines.indexOf(line) + 1];
+                        
+                        if (nextLine?.startsWith('data:')) {
+                            const dataStr = nextLine.slice(5).trim();
+                            
+                            if (dataStr && dataStr !== '{}') {
+                                try {
+                                    const data = JSON.parse(dataStr);
+                                    handleStreamEvent(eventType, data, thinkingMsg);
+                                } catch (e) {
+                                    console.error('Failed to parse SSE data:', e, dataStr);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         } catch (error) {
-            console.error('❌ Request failed:', error);
+            console.error('SSE error:', error);
+            setIsThinking(false);
+            setCurrentThinkingMessage(null);
             appendMessage({
                 role: 'assistant',
-                content: `❌ Connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+                content: `❌ Connection error: ${error instanceof Error ? error.message : 'Unknown error'}`
             });
         }
     }
 
-    async function monitorJobStatus(jobId: string) {
-        // Monitor job status and update chat when completed
-        const checkStatus = async () => {
-            try {
-                const response = await fetch(`${BACKEND_URL}/api/jobs/${jobId}/status`);
-                if (response.ok) {
-                    const status = await response.json();
-                    updateJob(jobId, { status: status.status, error: status.error });
+    function handleStreamEvent(eventType: string, data: any, thinkingMsg: MessageWithDetails) {
+        // Store all events in details for "Show Your Work"
+        const event: StreamEvent = { type: eventType as any, ...data };
+        thinkingMsg.details?.push(event);
 
-                    if (status.status === 'completed') {
+        switch (eventType) {
+            case 'metadata':
+                // Session info, store but don't display
+                console.log('Session:', data.session_id, 'Intent:', data.intent);
+                break;
+
+            case 'message':
+                // Update current step display
+                if (data.step) {
+                    thinkingMsg.currentStep = data.content || `Processing ${data.step}...`;
+                    setCurrentThinkingMessage({ ...thinkingMsg });
+                }
+                break;
+
+            case 'status':
+                // Update step based on status
+                if (data.step) {
+                    const stepMessages: Record<string, string> = {
+                        'research_complete': '✅ Research complete',
+                        'validation_complete': '✅ Target validated',
+                        'structure_found': '✅ Structure resolved',
+                        'pockets_detected': '✅ Pockets identified',
+                        'molecules_generated': '✅ Molecules generated',
+                        'screening_complete': '✅ Screening finished',
+                        'pocket_detection_failed': '⚠️ Pocket detection failed',
+                    };
+                    thinkingMsg.currentStep = stepMessages[data.step] || data.step;
+                    setCurrentThinkingMessage({ ...thinkingMsg });
+                }
+                break;
+
+            case 'error':
+                // Show error in thinking bubble
+                thinkingMsg.currentStep = `❌ Error: ${data.error}`;
+                setCurrentThinkingMessage({ ...thinkingMsg });
+                break;
+
+            case 'summary':
+                // Final summary - replace thinking bubble with final message
+                setIsThinking(false);
+                setCurrentThinkingMessage(null);
+                
+                // Add final message with all details stored
+                appendMessage({
+                    role: 'assistant',
+                    content: data.content,
+                    details: thinkingMsg.details
+                } as any);
+
+                // If it's a job, add to jobs context
+                if (data.job_id) {
+                    addJob({
+                        id: data.job_id,
+                        query: input,
+                        model: model,
+                        user_id: sessionId,
+                        current_time: new Date().toISOString(),
+                        status: 'running'
+                    });
+                }
+                break;
+
+            case 'done':
+                // Stream complete
+                if (isThinking) {
+                    // If still thinking and we get done, show what we have
+                    setIsThinking(false);
+                    setCurrentThinkingMessage(null);
+                    
+                    if (thinkingMsg.details && thinkingMsg.details.length > 0) {
                         appendMessage({
                             role: 'assistant',
-                            content: `✅ **Pipeline Completed!**\n\nJob ${jobId.slice(0, 8)}... has finished successfully. Check the "In Progress" tab to view detailed results.`
-                        });
-                    } else if (status.status === 'failed') {
-                        appendMessage({
-                            role: 'assistant',
-                            content: `❌ **Pipeline Failed**\n\nJob ${jobId.slice(0, 8)}... encountered an error: ${status.error || 'Unknown error'}`
-                        });
-                    } else if (status.status === 'running') {
-                        // Continue monitoring
-                        setTimeout(checkStatus, 10000); // Check every 10 seconds
+                            content: thinkingMsg.currentStep || 'Process completed.',
+                            details: thinkingMsg.details
+                        } as any);
                     }
                 }
-            } catch (error) {
-                console.error('Status check failed:', error);
-            }
-        };
-
-        // Start monitoring after a brief delay
-        setTimeout(checkStatus, 5000);
+                break;
+        }
     }
 
     async function onSend() {
-        const text = input.trim();
-        if (!text || !active || isThinking) return;
+        if (!input.trim() || isThinking) return;
 
-        // Check if this is a consent response
-        const isConsentResponse = pendingJobQuery && 
-            (text.toLowerCase() === 'yes' || 
-             text.toLowerCase() === 'y' || 
-             text.toLowerCase() === 'proceed' ||
-             text.toLowerCase() === 'go ahead' ||
-             text.toLowerCase() === 'submit');
-
-        // Add user message
-        appendMessage({ role: 'user', content: text });
+        const query = input.trim();
         setInput('');
-        setIsThinking(true);
 
-        if (isConsentResponse && pendingJobQuery) {
-            // Resubmit the pending job with consent
-            await handleGatewayRequest(pendingJobQuery, true);
-            setPendingJobQuery(null);
-        } else {
-            // Normal query
-            await handleGatewayRequest(text);
-        }
-        
-        setIsThinking(false);
+        // Use SSE for all queries
+        await handleSSERequest(query);
     }
-
-    async function onQuickAction(text: string) {
-        if (isThinking || !active) return;
-
-        // Add user message
-        appendMessage({ role: 'user', content: text });
-        setIsThinking(true);
-
-        // Send to gateway
-        await handleGatewayRequest(text);
-        setIsThinking(false);
-    }
-
-    const messages = active?.messages ?? [];
 
     return (
-        <div className="flex flex-col items-center">
-            {/* Hero Section */}
-            <div className="flex flex-col items-center text-center">
-                <div className="relative">
-                    <AnimatedOrb gradient={MODEL_GRADIENT[model] ?? MODEL_GRADIENT['gpt-4o']} />
-                    <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                        <span className="text-xs">🧬</span>
-                    </div>
-                </div>
-                <h1 className="mt-6 text-3xl md:text-4xl font-semibold">F.A.D.E Drug Discovery</h1>
-                <p className="mt-2 text-white/70 max-w-2xl text-sm">
-                    Ask me about proteins, diseases, or describe your drug discovery goals. I'll provide information or run the full pipeline for you.
-                </p>
-            </div>
-
-            {/* Conversation Bar */}
-            <div className="mt-6 w-full max-w-3xl">
-                <NewConversationBar
-                    onNew={handleNewConversation}
-                    count={conversations.length}
-                    modelLabel="F.A.D.E"
-                />
-            </div>
-
-            {/* Chat Panel */}
-            <div className="mt-8 w-full max-w-3xl">
-                <div
-                    ref={listRef}
-                    className="h-[44vh] md:h-[40vh] overflow-y-auto rounded-2xl border border-white/10 bg-white/5 p-4"
-                >
-                    <div className="space-y-3">
-                        {messages.map((m) => (
-                            <Bubble key={m.id} role={m.role} text={m.content} />
+        <div className="relative space-y-4">
+            <div className="h-[60vh] w-full space-y-2 overflow-y-auto rounded-xl" ref={listRef}>
+                {!active || active.messages.length === 0 ? (
+                    <>
+                        <AnimatedOrb gradient={MODEL_GRADIENT[model] || MODEL_GRADIENT.local} />
+                        <div className="space-y-3 px-1">
+                            <div className="text-sm text-white/70">
+                                Try one of these drug discovery queries:
+                            </div>
+                            <QuickActionButton
+                                onClick={async () => {
+                                    const query = "Find EGFR inhibitors for lung cancer";
+                                    setInput(query);
+                                    await handleSSERequest(query);
+                                }}
+                                disabled={isThinking}
+                            >
+                                🎯 Find EGFR inhibitors for lung cancer
+                            </QuickActionButton>
+                            <QuickActionButton
+                                onClick={async () => {
+                                    const query = "What is KRAS and why is it important?";
+                                    setInput(query);
+                                    await handleSSERequest(query);
+                                }}
+                                disabled={isThinking}
+                            >
+                                🧬 What is KRAS and why is it important?
+                            </QuickActionButton>
+                            <QuickActionButton
+                                onClick={async () => {
+                                    const query = "Find PDB structure 6DUK";
+                                    setInput(query);
+                                    await handleSSERequest(query);
+                                }}
+                                disabled={isThinking}
+                            >
+                                🔬 Find PDB structure 6DUK
+                            </QuickActionButton>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        {active.messages.map((msg, i) => (
+                            <EnhancedBubble key={i} message={msg as MessageWithDetails} />
                         ))}
-                        {isThinking && <AssistantTyping />}
+                        {currentThinkingMessage && (
+                            <ThinkingBubble 
+                                currentStep={currentThinkingMessage.currentStep || 'Processing...'} 
+                                details={currentThinkingMessage.details}
+                            />
+                        )}
+                    </>
+                )}
+            </div>
+
+            <ChatBar
+                value={input}
+                onInput={setInput}
+                onSend={onSend}
+                disabled={isThinking}
+                placeholder={isThinking ? "F.A.D.E is thinking..." : "Ask about proteins, drugs, or diseases..."}
+            />
+
+            <StatusBar
+                count={conversations.length}
+                modelLabel={model}
+                onNew={handleNewConversation}
+            />
+        </div>
+    );
+}
+
+// New component for the dynamic thinking bubble
+function ThinkingBubble({ currentStep, details }: { currentStep: string; details?: StreamEvent[] }) {
+    return (
+        <div className="flex justify-start">
+            <div className="max-w-[85%] rounded-2xl bg-white/7 px-4 py-3 text-sm leading-relaxed text-white border border-white/10">
+                <div className="flex items-center gap-3">
+                    <div className="flex gap-1">
+                        <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-blue-400" />
+                        <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-blue-400 animation-delay-150" />
+                        <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-blue-400 animation-delay-300" />
                     </div>
-                </div>
-
-                {/* Input Area */}
-                <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-3">
-                    <div className="flex items-start gap-3">
-                        <textarea
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                    e.preventDefault();
-                                    onSend();
-                                }
-                            }}
-                            rows={1}
-                            placeholder="Ask about proteins, request drug discovery, or get pipeline status..."
-                            className="min-h-[44px] max-h-40 flex-1 resize-y bg-transparent p-2 outline-none placeholder:text-white/50"
-                        />
-                        <button
-                            onClick={onSend}
-                            disabled={!input.trim() || isThinking || !activeId}
-                            className="rounded-full bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                            {isThinking ? 'Thinking...' : 'Send'}
-                        </button>
-                    </div>
-                </div>
-
-                {/* Enhanced Quick Actions */}
-                <div className="mt-4 space-y-2">
-                    <QuickActionButton
-                        onClick={() => onQuickAction('What is F.A.D.E and how does it work?')}
-                        disabled={isThinking}
-                    >
-                        💡 What is F.A.D.E and how does it work?
-                    </QuickActionButton>
-
-                    <QuickActionButton
-                        onClick={() => onQuickAction('What is KRAS and why is it important in cancer?')}
-                        disabled={isThinking}
-                    >
-                        🧬 What is KRAS and why is it important in cancer?
-                    </QuickActionButton>
-
-                    <QuickActionButton
-                        onClick={() => onQuickAction('Find EGFR inhibitors for lung cancer with oral bioavailability')}
-                        disabled={isThinking}
-                    >
-                        🎯 Find EGFR inhibitors for lung cancer (oral)
-                    </QuickActionButton>
-
-                    <QuickActionButton
-                        onClick={() => onQuickAction('Design KRAS G12C inhibitors with brain penetration for pancreatic cancer')}
-                        disabled={isThinking}
-                    >
-                        🧠 Design KRAS G12C inhibitors with brain penetration
-                    </QuickActionButton>
+                    <span className="text-white/90">{currentStep}</span>
                 </div>
             </div>
         </div>
     );
 }
 
-// Supporting Components
+// Enhanced bubble with "Show Your Work" toggle
+function EnhancedBubble({ message }: { message: MessageWithDetails }) {
+    const [showDetails, setShowDetails] = useState(false);
+    const hasDetails = message.details && message.details.length > 0;
 
-function NewConversationBar({
-    onNew,
-    count,
-    modelLabel,
-}: {
-    onNew: () => void;
-    count: number;
-    modelLabel: string;
+    if (message.role === 'user') {
+        return <Bubble role={message.role} text={message.content} />;
+    }
+
+    return (
+        <div className="flex justify-start">
+            <div className="max-w-[85%] space-y-2">
+                <div className="rounded-2xl bg-white/7 px-4 py-3 text-sm leading-relaxed text-white border border-white/10">
+                    <MarkdownText text={message.content} />
+                    
+                    {hasDetails && (
+                        <button
+                            onClick={() => setShowDetails(!showDetails)}
+                            className="mt-3 flex items-center gap-2 text-xs text-white/60 hover:text-white/80 transition-colors"
+                        >
+                            <svg 
+                                className={cn("h-3 w-3 transition-transform", showDetails && "rotate-90")}
+                                viewBox="0 0 24 24" 
+                                fill="none" 
+                                stroke="currentColor" 
+                                strokeWidth="2"
+                            >
+                                <path d="M9 18l6-6-6-6" />
+                            </svg>
+                            {showDetails ? 'Hide' : 'Show'} Details
+                        </button>
+                    )}
+                </div>
+
+                {showDetails && hasDetails && (
+                    <div className="rounded-lg bg-black/30 border border-white/5 p-3 text-xs font-mono text-white/70 max-h-64 overflow-y-auto">
+                        {message.details!.map((event, i) => (
+                            <div key={i} className="mb-1">
+                                {event.type === 'message' && (
+                                    <span className="text-blue-400">[message]</span>
+                                )}
+                                {event.type === 'status' && (
+                                    <span className="text-green-400">[status]</span>
+                                )}
+                                {event.type === 'error' && (
+                                    <span className="text-red-400">[error]</span>
+                                )}
+                                {' '}
+                                {event.content || event.error || `${event.node || ''} ${event.step || ''}`.trim()}
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// Rest of the helper components remain the same
+function ChatBar({ 
+    value, 
+    onInput, 
+    onSend, 
+    disabled,
+    placeholder 
+}: { 
+    value: string;
+    onInput: (v: string) => void;
+    onSend: () => void;
+    disabled?: boolean;
+    placeholder?: string;
 }) {
     return (
-        <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-            <div className="text-xs text-white/70">
+        <div className="relative flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-3 transition-colors focus-within:border-white/20 focus-within:bg-white/7">
+            <input
+                type="text"
+                value={value}
+                onChange={(e) => onInput(e.target.value)}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey && !disabled) {
+                        e.preventDefault();
+                        onSend();
+                    }
+                }}
+                placeholder={placeholder}
+                disabled={disabled}
+                className="flex-1 bg-transparent text-sm text-white placeholder-white/40 outline-none disabled:opacity-50"
+                aria-label="Message input"
+            />
+            <button
+                type="button"
+                onClick={onSend}
+                disabled={disabled || !value.trim()}
+                className="rounded-full bg-blue-500 p-2 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                aria-label="Send message"
+            >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+                </svg>
+            </button>
+        </div>
+    );
+}
+
+function StatusBar({ count, modelLabel, onNew }: { count: number; modelLabel: string; onNew: () => void }) {
+    return (
+        <div className="flex items-center justify-between text-xs text-white/60">
+            <div>
                 Conversations: <span className="text-white">{count}</span> · Engine: <span className="text-white">{modelLabel}</span>
             </div>
             <button
@@ -416,7 +503,6 @@ function NewConversationBar({
 
 function Bubble({ role, text }: { role: Role; text: string }) {
     const isUser = role === 'user';
-    const isMarkdown = text.includes('**') || text.includes('\n');
 
     return (
         <div className={cn('flex w-full', isUser ? 'justify-end' : 'justify-start')}>
@@ -426,11 +512,7 @@ function Bubble({ role, text }: { role: Role; text: string }) {
                     ? 'bg-blue-500 text-white'
                     : 'bg-white/7 text-white border border-white/10'
             )}>
-                {isMarkdown ? (
-                    <MarkdownText text={text} />
-                ) : (
-                    <span>{text}</span>
-                )}
+                <span>{text}</span>
             </div>
         </div>
     );
@@ -457,21 +539,6 @@ function MarkdownText({ text }: { text: string }) {
                     ));
                 }
             })}
-        </div>
-    );
-}
-
-function AssistantTyping() {
-    return (
-        <div className="flex justify-start">
-            <div className="flex items-center gap-2 rounded-2xl bg-white/7 px-4 py-3 border border-white/10">
-                <span className="text-sm text-white/80">F.A.D.E is thinking</span>
-                <div className="flex gap-1">
-                    <span className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-blue-400" />
-                    <span className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-blue-400 animation-delay-150" />
-                    <span className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-blue-400 animation-delay-300" />
-                </div>
-            </div>
         </div>
     );
 }

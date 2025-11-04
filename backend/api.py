@@ -7,12 +7,13 @@ from pydantic import BaseModel, Field
 from typing import Any, Dict, Optional, List, Literal, AsyncGenerator
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 from langchain_core.runnables import RunnableConfig
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, BaseMessage
 from datetime import datetime
 from contextlib import asynccontextmanager
 
-# --- 1. Import all your F.A.D.E. code ---
+# --- Import all your F.A.D.E. code ---
 from fade.config import config
 from fade.utils import setup_logging, get_logger
 from fade.tools.llm_client import get_llm_client
@@ -22,6 +23,69 @@ from fade.workflows.drug_discovery import (
     create_drug_discovery_graph, # Import the async function that creates the app
     run_drug_discovery_pipeline, 
     DrugDiscoveryState
+)
+
+# --- Setup Logging and Config ---
+setup_logging(level="INFO", use_rich=False)
+logger = get_logger("api")
+
+try:
+    config.validate()
+    logger.info("Configuration validated.")
+except ValueError as e:
+    logger.error(f"Configuration error: {e}")
+    sys.exit(1)
+
+# This dictionary will hold our globally initialized objects
+app_state = {}
+session_cache: Dict[str, List[tuple[str, str]]] = {}
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    On API startup, load models and create the compiled graph.
+    """
+    logger.info("Application startup...")
+    
+    # Load RAG context
+    app_state["project_context"], app_state["sample_queries"] = load_context_files(logger)
+    
+    # Load Router LLM
+    try:
+        app_state["router_llm"] = get_llm_client()
+        logger.info("Router LLM initialized.")
+    except Exception as e:
+        logger.error(f"Could not initialize router LLM: {e}")
+        sys.exit(1)
+        
+    # Await the creation of the LangGraph app
+    try:
+        app_state["langgraph_app"] = await create_drug_discovery_graph()
+        logger.info("Compiled LangGraph app initialized with AsyncSqliteSaver.")
+    except Exception as e:
+        logger.error(f"Could not compile LangGraph app: {e}")
+        sys.exit(1)
+    
+    # --- This is where the application runs ---
+    yield
+    # ----------------------------------------
+    
+    # Code here would run on shutdown
+    logger.info("Application shutdown...")
+
+# --- 3. Load Models & Context (at startup, not in the endpoint) ---
+app_fastapi = FastAPI(
+    title="F.A.D.E - Agentic Drug Engine",
+    description="API for the F.A.D.E drug discovery pipeline.",
+    lifespan=lifespan
+)
+
+app_fastapi.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins (e.g., localhost:3000)
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods (GET, POST, OPTIONS, etc.)
+    allow_headers=["*"],  # Allows all headers
 )
 
 # --- (Pydantic model) ---
@@ -59,6 +123,24 @@ async def get_user_intent(llm: Any, query: str, history: list) -> str:
     """
     Uses a fast LLM to classify the user's query intent.
     """
+    # Check for follow-up queries that reference previous responses
+    query_lower = query.lower()
+    follow_up_phrases = [
+        "keep it", "make it", "say that", "translate", "shorter", "longer",
+        "concise", "brief", "detailed", "in french", "in spanish", "again",
+        "repeat", "summarize", "explain more", "tell me more"
+    ]
+    
+    # If this looks like a follow-up to modify previous response, treat it as continuation
+    if any(phrase in query_lower for phrase in follow_up_phrases) and len(history) > 0:
+        # Get the intent of the last user query if available
+        if len(history) >= 2:
+            # This is a follow-up, so use the same intent as the previous query
+            # For now, default to chitchat for follow-ups to ensure they get processed
+            logger.info(f"Detected follow-up query: {query}")
+            # We'll treat follow-ups as chitchat to ensure context is preserved
+            return "chitchat"
+    
     llm_with_tool = llm.with_structured_output(UserIntent)
     
     history_messages: List[BaseMessage] = []
@@ -69,20 +151,33 @@ async def get_user_intent(llm: Any, query: str, history: list) -> str:
             history_messages.append(AIMessage(content=content))
 
     prompt: List[BaseMessage] = [
-        SystemMessage(content="""Classify the user's intent based on their latest query and the chat history.
-    - 'drug_discovery' is for specific scientific tasks like "Find KRAS G12C".
-    - 'chitchat' is for simple greetings or conversation like "Hello".
-    - 'about_system' is when the user asks what you are, for help, or "What did you just say?".
-    """),
+        SystemMessage(content="""You are a router. Classify the user's intent based on their latest query.
+
+- **'drug_discovery'**: This is for specific scientific tasks.
+  Examples: "Find inhibitors for KRAS G12C", "Structure of P00533", "Generate molecules for 4OBE".
+
+- **'about_system'**: This is for questions ABOUT the chatbot.
+  Examples: "What is F.A.D.E?", "What can you do?", "help", "who made you?".
+
+- **'chitchat'**: This is for simple greetings or conversation.
+  Examples: "Hello", "Thanks", "How are you?".
+"""),
     ]
     prompt.extend(history_messages)
     prompt.append(HumanMessage(content=f"Classify this query: \"{query}\""))
 
     try:
-        result = await llm_with_tool.ainvoke(prompt) # Use .ainvoke()
+        result = await llm_with_tool.ainvoke(prompt)
+        logger.info(f"Intent classified as: {result.intent}") # Add this log
         return result.intent
-    except Exception:
-        return "drug_discovery"
+    except Exception as e:
+        logger.warning(f"Intent classification failed: {e}. Defaulting to 'drug_discovery'.")
+        # Defaulting here is risky, let's see if we can be smarter
+        if "help" in query.lower() or "what is" in query.lower() or "who are" in query.lower():
+            return "about_system"
+        if len(query.split()) < 3: # Simple greetings are usually short
+             return "chitchat"
+        return "drug_discovery" # Default for complex queries
 
 async def get_rag_response(llm: Any, query: str, context: str, samples: str, history: list) -> str:
     """
@@ -117,19 +212,29 @@ async def get_rag_response(llm: Any, query: str, context: str, samples: str, his
 async def get_chitchat_response(llm: Any, query: str, history: list) -> str:
     """
     Generates a simple, friendly response for non-pipeline queries.
+    Handles follow-up requests like "keep it concise" or "say that in French".
     """
     history_messages: List[BaseMessage] = []
-    for role, content in history[-4:]:
+    for role, content in history[-6:]:  # Include more history for better context
         if role == "user":
             history_messages.append(HumanMessage(content=content))
         else:
             history_messages.append(AIMessage(content=content))
     
     prompt: List[BaseMessage] = [
-        SystemMessage(content="You are F.A.D.E... A user is making simple chitchat..."),
+        SystemMessage(content="""You are F.A.D.E, a helpful AI assistant for drug discovery.
+
+IMPORTANT: Pay close attention to the conversation history. 
+- If the user asks you to modify a previous response (e.g., "keep it concise", "say that in French"), 
+  you should take your previous response and modify it according to their request.
+- If the user is asking for a translation, translate your PREVIOUS response, not their request.
+- If the user asks for a shorter/longer version, modify your PREVIOUS response accordingly.
+- Always maintain context from the conversation history.
+
+For general chitchat, be friendly and helpful."""),
     ]
     prompt.extend(history_messages)
-    prompt.append(HumanMessage(content=query))
+    # Don't add the query again as it's already in history_messages
     
     try:
         response = await llm.ainvoke(prompt) # Use .ainvoke()
@@ -182,61 +287,7 @@ async def summarize_with_llm(llm: Any, final_state: dict) -> str:
         logger.error(f"LLM summarization failed: {e}")
         return final_state.get("error", "An unknown error occurred.")
 
-# --- 2. Setup Logging and Config ---
-setup_logging(level="INFO", use_rich=False)
-logger = get_logger("api")
-
-try:
-    config.validate()
-    logger.info("Configuration validated.")
-except ValueError as e:
-    logger.error(f"Configuration error: {e}")
-    sys.exit(1)
-
-# This dictionary will hold our globally initialized objects
-app_state = {}
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """
-    On API startup, load models and create the compiled graph.
-    """
-    logger.info("Application startup...")
-    
-    # Load RAG context
-    app_state["project_context"], app_state["sample_queries"] = load_context_files(logger)
-    
-    # Load Router LLM
-    try:
-        app_state["router_llm"] = get_llm_client()
-        logger.info("Router LLM initialized.")
-    except Exception as e:
-        logger.error(f"Could not initialize router LLM: {e}")
-        sys.exit(1)
-        
-    # Await the creation of the LangGraph app
-    try:
-        app_state["langgraph_app"] = await create_drug_discovery_graph()
-        logger.info("Compiled LangGraph app initialized with AsyncSqliteSaver.")
-    except Exception as e:
-        logger.error(f"Could not compile LangGraph app: {e}")
-        sys.exit(1)
-    
-    # --- This is where the application runs ---
-    yield
-    # ----------------------------------------
-    
-    # Code here would run on shutdown
-    logger.info("Application shutdown...")
-
-# --- 3. Load Models & Context (at startup, not in the endpoint) ---
-app_fastapi = FastAPI(
-    title="F.A.D.E - Agentic Drug Engine",
-    description="API for the F.A.D.E drug discovery pipeline.",
-    lifespan=lifespan
-)
-
-# --- 4. Define Request/Response Models ---
+# --- Define Request/Response Models ---
 class ChatRequest(BaseModel):
     query: str
     session_id: Optional[str] = None 
@@ -247,9 +298,9 @@ class ChatResponse(BaseModel):
     response_text: Optional[str] = None
     pipeline_state: Optional[Dict[str, Any]] = None
 
-# --- 5. Async Generator for Streaming Pipeline Events ---
+# --- Async Generator for Streaming Pipeline Events ---
 # --- Pass app_state to access LLM and Graph App ---
-async def stream_pipeline_events(query: str, thread_config: RunnableConfig) -> AsyncGenerator[str, None]:
+async def stream_pipeline_events(app_state: Dict[str, Any], query: str, thread_config: RunnableConfig) -> AsyncGenerator[str, None]:
     """
     Calls the LangGraph app's .astream_events() method and yields 
     SSE-formatted data for messages in real-time.
@@ -438,7 +489,7 @@ async def stream_pipeline_events(query: str, thread_config: RunnableConfig) -> A
     
     yield "event: done\ndata: {}\n\n"
 
-# --- 6. The /chat-stream Endpoint ---
+# --- The /chat-stream Endpoint ---
 @app_fastapi.post("/chat-stream")
 async def handle_chat_stream(request: ChatRequest):
     """
@@ -454,26 +505,40 @@ async def handle_chat_stream(request: ChatRequest):
     router_llm = app_state["router_llm"]
     project_context = app_state["project_context"]
     sample_queries = app_state["sample_queries"]
+
+    chat_history = session_cache.get(session_id, [])
     
-    logger.info(f"Classifying intent for stream query: {query}")
-    intent = await get_user_intent(router_llm, query, history=[])
+    logger.info(f"Session: {session_id}")
+    logger.info(f"Query: {query}")
+    logger.info(f"History length: {len(chat_history)}")
+    if chat_history:
+        logger.info(f"Last exchange: {chat_history[-2:] if len(chat_history) >= 2 else chat_history}")
+    
+    intent = await get_user_intent(router_llm, query, chat_history)
     
     async def event_generator():
         yield f"event: metadata\ndata: {json.dumps({'session_id': session_id, 'intent': intent})}\n\n"
         
         if intent == "drug_discovery":
-            # --- : Pass app_state to the generator ---
-            async for event_data in stream_pipeline_events(query, thread_config):
+            async for event_data in stream_pipeline_events(app_state, query, thread_config):
                 yield event_data
         
         elif intent == "chitchat":
-            response_text = await get_chitchat_response(router_llm, query, history=[])
-            yield f"data: {json.dumps({'type': 'message', 'content': response_text.replace('F.A.D.E: ', '')})}\n\n"
+            # Add current query to history BEFORE generating response
+            chat_history.append(("user", query))
+            response_text = await get_chitchat_response(router_llm, query, chat_history)
+            chat_history.append(("ai", response_text.replace("F.A.D.E: ", "")))
+            session_cache[session_id] = chat_history # Save back to cache
+            yield f"event: summary\ndata: {json.dumps({'type': 'summary', 'content': response_text.replace('F.A.D.E: ', '')})}\n\n"
             yield "event: done\ndata: {}\n\n"
 
         elif intent == "about_system":
-            response_text = await get_rag_response(router_llm, query, project_context, sample_queries, history=[])
-            yield f"data: {json.dumps({'type': 'message', 'content': response_text.replace('F.A.D.E: ', '')})}\n\n"
+            # Add current query to history BEFORE generating response
+            chat_history.append(("user", query))
+            response_text = await get_rag_response(router_llm, query, project_context, sample_queries, chat_history)
+            chat_history.append(("ai", response_text.replace("F.A.D.E: ", "")))
+            session_cache[session_id] = chat_history # Save back to cache
+            yield f"event: summary\ndata: {json.dumps({'type': 'summary', 'content': response_text.replace('F.A.D.E: ', '')})}\n\n"
             yield "event: done\ndata: {}\n\n"
             
     return StreamingResponse(
@@ -486,7 +551,7 @@ async def handle_chat_stream(request: ChatRequest):
         }
     )
 
-# --- 7. The /chat Endpoint ---
+# --- The /chat Endpoint ---
 @app_fastapi.post("/chat", response_model=ChatResponse)
 async def handle_chat_request(request: ChatRequest):
     """
@@ -501,10 +566,12 @@ async def handle_chat_request(request: ChatRequest):
     langgraph_app = app_state["langgraph_app"]
     project_context = app_state["project_context"]
     sample_queries = app_state["sample_queries"]
+
+    chat_history = session_cache.get(session_id, [])
     
     logger.info(f"Classi_fying intent for query: {query}")
     
-    intent = await get_user_intent(router_llm, query, history=[])
+    intent = await get_user_intent(router_llm, query, chat_history)
     
     if intent == "drug_discovery":
         logger.info(f"Intent: drug_discovery. Starting pipeline for session: {session_id}")
@@ -514,6 +581,10 @@ async def handle_chat_request(request: ChatRequest):
         final_state = await run_drug_discovery_pipeline(langgraph_app, query, thread_config)
 
         response_text = await summarize_with_llm(router_llm, final_state)
+
+        chat_history.append(("user", query))
+        chat_history.append(("ai", response_text))
+        session_cache[session_id] = chat_history
         
         # -- Create a serializable copy of the state ---
         serializable_state = final_state.copy()
@@ -533,7 +604,10 @@ async def handle_chat_request(request: ChatRequest):
 
     elif intent == "chitchat":
         logger.info("Intent: chitchat. Generating simple response...")
-        response_text = await get_chitchat_response(router_llm, query, history=[])
+        response_text = await get_chitchat_response(router_llm, query, chat_history)
+        chat_history.append(("user", query))
+        chat_history.append(("ai", response_text.replace("F.A.D.E: ", "")))
+        session_cache[session_id] = chat_history
         return ChatResponse(
             session_id=session_id,
             intent=intent,
@@ -547,8 +621,11 @@ async def handle_chat_request(request: ChatRequest):
             query, 
             project_context, 
             sample_queries, 
-            history=[]
+            chat_history
         )
+        chat_history.append(("user", query))
+        chat_history.append(("ai", response_text.replace("F.A.D.E: ", "")))
+        session_cache[session_id] = chat_history
         return ChatResponse(
             session_id=session_id,
             intent=intent,

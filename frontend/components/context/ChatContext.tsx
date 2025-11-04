@@ -1,4 +1,4 @@
-// components/context/ChatContext.tsx
+// components/context/ChatContext.tsx - Enhanced to support message details
 'use client';
 
 import React, {
@@ -12,7 +12,18 @@ import React, {
 } from 'react';
 
 export type Role = 'user' | 'assistant' | 'system';
-export type ChatMessage = { id: string; role: Role; content: string; ts: string };
+
+// Enhanced message type to support detailed logs
+export type ChatMessage = { 
+  id: string; 
+  role: Role; 
+  content: string; 
+  ts: string;
+  details?: any[]; // Store SSE events for "Show Your Work"
+  isThinking?: boolean; // For thinking state
+  currentStep?: string; // Current processing step
+};
+
 export type Conversation = {
   id: string;
   title: string;
@@ -72,7 +83,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const createConversation: Ctx['createConversation'] = (opts) => {
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
-    const model = opts?.model ?? 'gpt-4o';
+    const model = opts?.model ?? 'gemini-2.5-pro';
     const greeting = opts?.greeting ?? 'Hi! Ask me anything.';
     const convo: Conversation = {
       id,
@@ -107,7 +118,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       const convo: Conversation = {
         id,
         title: msg.role === 'user' ? msg.content.slice(0, 60) : 'New chat',
-        model: 'gpt-4o',
+        model: 'gemini-2.5-pro',
         createdAt: now,
         updatedAt: now,
         messages: [],
@@ -159,7 +170,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     [conversations, activeId]
   );
 
-  // ✅ ALWAYS return JSX here
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
 }
 

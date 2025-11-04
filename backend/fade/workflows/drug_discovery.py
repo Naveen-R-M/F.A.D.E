@@ -129,7 +129,8 @@ async def create_drug_discovery_graph():
         "pocket_ranker",
         should_continue_targeting,
         {
-            "continue": "molecule_generator",
+            # "continue": "molecule_generator",
+            "continue": END,
             "end": END
         }
     )
@@ -139,7 +140,8 @@ async def create_drug_discovery_graph():
         "pocket_from_ligand",
         should_continue_targeting,  # Reuse same logic
         {
-            "continue": "molecule_generator",
+            # "continue": "molecule_generator",
+            "continue": END,
             "end": END
         }
     )

@@ -343,23 +343,6 @@ export default function ChatUI() {
 
     return (
         <div className="relative space-y-4">
-            {/* Backend Status Indicator */}
-            {backendStatus === 'offline' && (
-                <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-2 text-sm text-red-400">
-                    ⚠️ Server Offline.
-                </div>
-            )}
-            {backendStatus === 'checking' && (
-                <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/30 px-4 py-2 text-sm text-yellow-400">
-                    🔄 Connecting Server...
-                </div>
-            )}
-            {backendStatus === 'online' && showSuccessMessage && (
-                <div className="rounded-lg bg-green-500/10 border border-green-500/30 px-4 py-2 text-sm text-green-400 animate-fade-in">
-                    ✅ Online
-                </div>
-            )}
-            
             <div className="h-[60vh] w-full space-y-2 overflow-y-auto rounded-xl" ref={listRef}>
                 {!active || active.messages.length === 0 ? (
                     <>

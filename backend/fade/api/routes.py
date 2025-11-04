@@ -22,7 +22,7 @@ from fade.api.models import (
 from fade.intelligence.memory import MemoryStore
 from fade.intelligence.rag import RAG
 from fade.intelligence.classifier import QueryClassifier
-from fade.intelligence.deepseek_agent import DeepSeekAgent as GeminiAgent
+from fade.intelligence.gemini_agent import GeminiAgent
 from fade.api.pipeline_bridge import pipeline_bridge
 
 # Create router
@@ -56,9 +56,9 @@ def init_intelligence():
     
     # Initialize LLM agent - NO FALLBACK
     print("[INIT] Loading LLM Agent...", flush=True)
-    from fade.intelligence.deepseek_agent import DeepSeekAgent
-    gemini_agent = DeepSeekAgent()  # Will raise if not available
-    print(f"[INIT] LLM Agent active: DeepSeek via Ollama", flush=True)
+    from fade.intelligence.gemini_agent import GeminiAgent
+    gemini_agent = GeminiAgent()  # Will raise if not available
+    print(f"[INIT] LLM Agent active: Gemini", flush=True)
     
     print("[INIT] All intelligence components initialized successfully!", flush=True)
 

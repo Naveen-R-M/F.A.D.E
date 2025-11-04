@@ -31,7 +31,7 @@ class GeminiAgent:
         Args:
             api_key: Gemini API key (or from environment)
         """
-        self.api_key = api_key or os.getenv("GEMINI_API_KEY")
+        self.api_key = api_key or os.getenv("GOOGLE_API_KEY")
         self.model = None
         self.initialized = False
         
@@ -49,7 +49,7 @@ class GeminiAgent:
             
             # Initialize model with system instruction
             self.model = genai.GenerativeModel(
-                'gemini-1.5-flash',
+                'gemini-2.5-flash',
                 system_instruction=self._get_system_prompt()
             )
             
@@ -123,7 +123,7 @@ IMPORTANT:
             return {
                 "message": response.text,
                 "ai_generated": True,
-                "model": "gemini-1.5-flash"
+                "model": "gemini-2.5-flash"
             }
             
         except Exception as e:

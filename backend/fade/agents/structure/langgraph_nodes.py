@@ -150,11 +150,15 @@ def structure_resolver_node(state: DrugDiscoveryState) -> Dict[str, Any]:
                     "resolution": best_structure.get("resolution"),
                     "source": "PDB",
                     "confidence_score": None,
-                    "has_ligand": best_structure.get("has_ligand", False),
-                    "ligand_names": best_structure.get("ligands", [])
+                    "has_drug_like_ligand": best_structure.get("has_drug_like_ligand", False),
+                    "has_ligand": len(best_structure.get("ligands", [])) > 0,
+                    "ligand_names": [l.get('name', l.get('id')) for l in best_structure.get("ligands", [])],
+                    "drug_like_ligands": best_structure.get("drug_like_ligands", [])
                 }
                 
-                message = f"Found experimental structure: PDB {best_structure['pdb_id']} ({best_structure.get('resolution', 'N/A')} Å resolution)"
+                # Determine structure type for message
+                ligand_status = "with drug-like ligands" if best_structure.get("has_drug_like_ligand") else "Apo structure"
+                message = f"Found experimental structure: PDB {best_structure['pdb_id']} ({best_structure.get('resolution', 'N/A')} Å resolution) - {ligand_status}"
                 
                 return {
                     "structure": structure_info,
@@ -338,7 +342,7 @@ def _select_best_pdb(structures: list, target_info: Optional[Dict] = None) -> Op
         structures,
         target_mutations=mutations,
         known_compounds=known_compounds,
-        fallback_to_any=False  # NO FALLBACK - strict requirement
+        fallback_to_any=True  # FIXED: Always use experimental structures over predicted ones
     )
     
     if best:
@@ -346,6 +350,10 @@ def _select_best_pdb(structures: list, target_info: Optional[Dict] = None) -> Op
         if best.get('drug_like_ligands'):
             ligand_names = [l.get('name', l.get('id', 'Unknown')) for l in best['drug_like_ligands']]
             logger.info(f"  Contains drug-like ligands: {', '.join(ligand_names)}")
+            logger.info(f"  → Will proceed to DiffSBDD for molecule generation")
+        else:
+            logger.info(f"  No drug-like ligands found (Apo structure)")
+            logger.info(f"  → Will proceed to FPocket for pocket detection")
     
     return best
 

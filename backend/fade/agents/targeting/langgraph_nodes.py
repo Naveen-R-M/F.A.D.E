@@ -483,3 +483,89 @@ def _generate_enhanced_selection_rationale(pocket: Dict[str, Any], mutations: Li
     rationale = "Selected based on: " + "; ".join(rationale_parts)
     
     return rationale
+
+
+def pocket_from_ligand_node(state: DrugDiscoveryState) -> Dict[str, Any]:
+    """
+    LangGraph node to extract pocket from bound ligand in holo structures.
+    
+    This node runs ONLY for structures with drug-like ligands.
+    It extracts the pocket definition from the ligand's binding site.
+    
+    Args:
+        state: Current pipeline state
+        
+    Returns:
+        State updates with selected pocket from ligand
+    """
+    logger.info("[Pocket from Ligand] Extracting pocket from bound ligand...")
+    
+    structure = state.get("structure", {})
+    
+    if not structure or not structure.get("structure_path"):
+        return {
+            "error": "No structure available for pocket extraction",
+            "should_continue": False,
+            "current_step": "pocket_extraction_failed"
+        }
+    
+    if not structure.get("has_drug_like_ligand"):
+        return {
+            "error": "No drug-like ligand found in structure",
+            "should_continue": False,
+            "current_step": "pocket_extraction_failed"
+        }
+    
+    try:
+        # Import the utility function
+        from fade.tools.pdb_pocket_utils import extract_ligand_pocket, get_first_drug_like_ligand
+        
+        # Get the PDB path and ligand ID
+        pdb_path = structure["structure_path"]
+        ligand_id = get_first_drug_like_ligand(structure)
+        
+        if not ligand_id:
+            return {
+                "error": "Could not identify drug-like ligand ID",
+                "should_continue": False,
+                "current_step": "pocket_extraction_failed"
+            }
+        
+        logger.info(f"Extracting pocket from ligand: {ligand_id}")
+        
+        # Extract pocket information
+        pocket = extract_ligand_pocket(pdb_path, ligand_id)
+        
+        # Add additional metadata
+        pocket.update({
+            "pocket_id": "ligand_pocket",
+            "rank": 1,
+            "confidence_score": 1.0,  # Highest confidence - actual binding site
+            "druggability_score": 1.0,  # Known to bind drugs
+            "source_tools": ["ligand_extraction"],
+            "is_consensus": False,
+            "rationale": f"Pocket defined by bound drug-like ligand {ligand_id}. This is the actual binding site."
+        })
+        
+        logger.info(f"Successfully extracted pocket from ligand {ligand_id}")
+        logger.info(f"  Center: {pocket['center']}")
+        logger.info(f"  Residues: {len(pocket['residues'])} residues")
+        logger.info(f"  Volume: {pocket.get('pocket_volume', 0):.0f} Ų")
+        
+        message = f"✓ Extracted pocket from bound ligand {ligand_id} - proceeding to molecule generation"
+        
+        return {
+            "selected_pocket": pocket,
+            "pockets": [pocket],  # Store as single-item list for consistency
+            "messages": [HumanMessage(content=message)],
+            "current_step": "pocket_extracted",
+            "should_continue": True
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to extract pocket from ligand: {e}")
+        return {
+            "error": f"Pocket extraction failed: {str(e)}",
+            "should_continue": False,
+            "current_step": "pocket_extraction_failed"
+        }

@@ -70,6 +70,50 @@ class Boltz2Client:
         """
         return self.hpc_client.check_job_status(job_id)
 
+    def predict_affinity(self, sequence: str, ligand_smiles: str,
+                         job_name: str = None, **kwargs):
+        """
+        Submit a Boltz2 protein-ligand binding-affinity prediction job.
+
+        Boltz2 scores one ligand per job, so callers screening a batch of molecules
+        must submit one job per ligand.
+
+        Args:
+            sequence: Target protein sequence.
+            ligand_smiles: Candidate ligand SMILES.
+            job_name: Optional job name.
+            **kwargs: Passed through to the HPC client (job_id, use_msa, ligand_id, ...).
+
+        Returns:
+            Dictionary with job_id and status.
+        """
+        return self.hpc_client.predict_affinity(
+            sequence=sequence,
+            ligand_smiles=ligand_smiles,
+            job_name=job_name,
+            **kwargs
+        )
+
+    def wait_for_affinity(self, job_id: str, max_wait: int = None,
+                          poll_interval: int = None):
+        """
+        Wait for a Boltz2 affinity job and return the parsed prediction dict.
+
+        Args:
+            job_id: Job ID to wait for.
+            max_wait: Maximum wait time in seconds.
+            poll_interval: Polling interval in seconds.
+
+        Returns:
+            Parsed affinity result dict (affinity_pred_value,
+            affinity_probability_binary, binding_affinity_kcal_mol, ...) or None.
+        """
+        return self.hpc_client.wait_for_affinity(
+            job_id=job_id,
+            max_wait=max_wait,
+            poll_interval=poll_interval
+        )
+
 
 # Singleton instance
 _boltz2_client = None

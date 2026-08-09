@@ -15,8 +15,10 @@ import os
 import time
 import json
 import math
+import shutil
 import logging
 import tempfile
+import subprocess
 from typing import Dict, Any, Optional, Tuple, List
 from pathlib import Path
 
@@ -45,9 +47,17 @@ class HPCBoltz2Client:
             key_path: Path to SSH private key
         """
         self.host = host or os.getenv("HPC_HOST", "explorer.northeastern.edu")
-        self.username = username or os.getenv("HPC_USER", "rajagopalmohanraj.n")
+        # Read the SAME credential env vars the shared HPC client (ssh_client.py,
+        # used by the fpocket and DiffSBDD arms) uses, so a .env configured for the
+        # other two arms works here without extra setup. HPC_USER has no hardcoded
+        # default (matching ssh_client.py) to avoid silently connecting as another
+        # user and writing jobs into their scratch path.
+        self.username = username or os.getenv("HPC_USER")
         self.password = password or os.getenv("HPC_PASSWORD")
-        self.key_path = key_path or os.getenv("HPC_KEY_PATH")
+        # Accept HPC_KEY_PATH (legacy, boltz-specific) OR HPC_SSH_KEY (the var the
+        # rest of the repo uses); prefer an explicitly passed key_path.
+        self.key_path = key_path or os.getenv("HPC_KEY_PATH") or os.getenv("HPC_SSH_KEY")
+        self.key_passphrase = os.getenv("HPC_SSH_PASSPHRASE")
         
         # HPC paths
         self.remote_base = f"/scratch/{self.username}/F.A.D.E/boltz2_jobs"
@@ -55,6 +65,14 @@ class HPCBoltz2Client:
         
         # Boltz2 settings
         self.boltz2_module = "boltz/2"
+        # Optional override: shell commands to make the `boltz` CLI available,
+        # used INSTEAD of `module use <path> && module load boltz/2`. Set
+        # BOLTZ2_ENV_SETUP to activate a local/personal Boltz-2 install, e.g.
+        #   BOLTZ2_ENV_SETUP="source /home/mani.na/boltz2/venv/bin/activate"
+        # or (conda) "source ~/miniconda3/etc/profile.d/conda.sh && conda activate boltz2"
+        # Multiple commands may be separated by ';' or newlines. When unset, the
+        # SLURM script falls back to the module-load default above.
+        self.env_setup = os.getenv("BOLTZ2_ENV_SETUP")
         self.max_wait_time = config.BOLTZ2_MAX_WAIT_TIME if hasattr(config, 'BOLTZ2_MAX_WAIT_TIME') else 1800
         self.poll_interval = config.BOLTZ2_POLL_INTERVAL if hasattr(config, 'BOLTZ2_POLL_INTERVAL') else 30
         self.partition = config.BOLTZ2_GPU_PARTITION if hasattr(config, 'BOLTZ2_GPU_PARTITION') else "gpu"
@@ -70,6 +88,18 @@ class HPCBoltz2Client:
 
         self.ssh_client = None
         self.sftp_client = None
+
+        # Local-execution mode: when the backend runs ON the cluster (e.g. inside
+        # a batch job), SSH-ing to a login host to submit child jobs is an
+        # unnecessary — and often blocked (SFTP subsystem closed) — detour.
+        # FADE_LOCAL_HPC=1 makes every remote op run locally: commands via
+        # subprocess, file transfers via direct file I/O. Unset, it uses SSH as
+        # before, so the same code still works when run from a laptop.
+        self.local_mode = os.getenv("FADE_LOCAL_HPC", "").strip().lower() in (
+            "1", "true", "yes", "on"
+        )
+        if self.local_mode:
+            logger.info("FADE_LOCAL_HPC set — Boltz2 HPC operations run LOCALLY (no SSH)")
     
     def predict_structure(self, 
                          sequence: str,
@@ -204,14 +234,29 @@ sequences:
                         
                         return structure_content
                 
-                # Check for error
-                error_file = f"{remote_dir}/boltz2.err"
-                if self._file_exists(error_file):
-                    error_content = self._download_file(error_file)
-                    if error_content and len(error_content.strip()) > 0:
-                        logger.error(f"Boltz2 error: {error_content[:500]}")
+                # Detect genuine completion via the exit-code marker the SLURM
+                # script writes to .out — NOT by the mere presence of .err.
+                # Boltz/PyTorch-Lightning write harmless banners to stderr
+                # ("Seed set to 42", "Loading boltz/2", CUDA notices), so a
+                # non-empty .err does NOT mean the job failed.
+                out_file = f"{remote_dir}/boltz2.out"
+                if self._file_exists(out_file):
+                    out_content = self._download_file(out_file) or ""
+                    if "Boltz2 exit code:" in out_content:
+                        # Job has finished. We got here without finding a CIF
+                        # above, so it finished WITHOUT producing a structure.
+                        error_file = f"{remote_dir}/boltz2.err"
+                        err_content = ""
+                        if self._file_exists(error_file):
+                            err_content = self._download_file(error_file) or ""
+                        err_tail = "\n".join(err_content.strip().splitlines()[-15:])
+                        logger.error(
+                            "Boltz2 structure job finished without producing a "
+                            f"structure.\n--- stdout tail ---\n{out_content.strip()[-800:]}\n"
+                            f"--- stderr tail ---\n{err_tail}"
+                        )
                         return None
-                
+
                 logger.debug(f"Waiting for Boltz2... ({int(time.time() - start_time)}s elapsed)")
                 time.sleep(poll_interval)
             
@@ -435,12 +480,28 @@ properties:
                         parsed["pose_path"] = pose_path
                         return parsed
 
-                # Check for a fatal error early.
-                error_file = f"{remote_dir}/boltz2_affinity.err"
-                if self._file_exists(error_file):
-                    error_content = self._download_file(error_file)
-                    if error_content and len(error_content.strip()) > 0:
-                        logger.error(f"Boltz2 affinity error: {error_content[:500]}")
+                # Detect genuine completion via the exit-code marker the SLURM
+                # script writes to .out — NOT by the mere presence of .err (which
+                # also captures harmless module-load banners like
+                # "Loading boltz/2 / Loading requirement: cuda/12.8.0").
+                out_file = f"{remote_dir}/boltz2_affinity.out"
+                if self._file_exists(out_file):
+                    out_content = self._download_file(out_file) or ""
+                    if "Boltz2 affinity exit code:" in out_content:
+                        # The job has finished. If we reach here, no affinity JSON
+                        # was found above, so it finished WITHOUT producing output.
+                        error_file = f"{remote_dir}/boltz2_affinity.err"
+                        err_content = ""
+                        if self._file_exists(error_file):
+                            err_content = self._download_file(error_file) or ""
+                        # Surface the tail of stderr (the real traceback), not the
+                        # module-load banner at the top.
+                        err_tail = "\n".join(err_content.strip().splitlines()[-15:])
+                        logger.error(
+                            "Boltz2 affinity job finished without producing an affinity "
+                            f"result.\n--- stdout tail ---\n{out_content.strip()[-800:]}\n"
+                            f"--- stderr tail ---\n{err_tail}"
+                        )
                         return None
 
                 logger.debug(f"Waiting for Boltz2 affinity... ({int(time.time() - start_time)}s elapsed)")
@@ -533,6 +594,22 @@ properties:
         logger.info(f"Saved affinity pose to {filepath}")
         return str(filepath)
 
+    def _env_setup_lines(self) -> List[str]:
+        """Shell lines that make the `boltz` CLI available in a SLURM job.
+
+        If BOLTZ2_ENV_SETUP is set, use those commands (e.g. activate a local
+        Boltz-2 install); otherwise fall back to loading the shared module.
+        """
+        if self.env_setup:
+            cmds = [c.strip() for part in self.env_setup.splitlines()
+                    for c in part.split(";") if c.strip()]
+            return ["# Activate Boltz-2 (BOLTZ2_ENV_SETUP override)", *cmds]
+        return [
+            "# Load modules",
+            f"module use {self.module_path}",
+            f"module load {self.boltz2_module}",
+        ]
+
     def _create_affinity_script(self,
                                 job_id: str,
                                 job_name: str,
@@ -578,9 +655,7 @@ properties:
         script_lines.extend([
             "#SBATCH --time=02:00:00",
             "",
-            "# Load modules",
-            f"module use {self.module_path}",
-            f"module load {self.boltz2_module}",
+            *self._env_setup_lines(),
             "",
             "# Set working directory",
             f"cd {remote_dir}",
@@ -701,9 +776,7 @@ properties:
         script_lines.extend([
             "#SBATCH --time=02:00:00", # Adjust time as needed
             "",
-            "# Load modules",
-            f"module use {self.module_path}",
-            f"module load {self.boltz2_module}",
+            *self._env_setup_lines(),
             "",
             "# Set working directory",
             f"cd {remote_dir}",
@@ -729,6 +802,7 @@ properties:
             f"    --cache \"{self.BOLTZ_CACHE_DIR}\" \\", # Cache dir
             f"    --out_dir output/ \\", # Output relative dir
             f"    --diffusion_samples {num_models} \\", # Number of samples
+            "    --no_kernels \\", # Disable cuequivariance kernels (incompat w/ torch 2.5.1)
         ])
 
         # Only add the MSA flag if msa_arg_val is not empty
@@ -807,6 +881,9 @@ properties:
     
     def _connect(self):
         """Establish SSH connection to HPC."""
+        if self.local_mode:
+            # Running on the cluster — no SSH needed.
+            return
         if self.ssh_client and self.ssh_client.get_transport() and self.ssh_client.get_transport().is_active():
             return
         
@@ -820,12 +897,25 @@ properties:
         
         if self.key_path and os.path.exists(self.key_path):
             connect_kwargs['key_filename'] = self.key_path
-            logger.info(f"Connecting to {self.host} with key file")
+            if self.key_passphrase:
+                connect_kwargs['passphrase'] = self.key_passphrase
+            logger.info(f"Connecting to {self.host} as {self.username} with key file")
         elif self.password:
             connect_kwargs['password'] = self.password
-            logger.info(f"Connecting to {self.host} with password")
+            logger.info(f"Connecting to {self.host} as {self.username} with password")
         else:
-            raise ValueError("No authentication method available (no key or password)")
+            raise ValueError(
+                "No authentication method available. Set HPC_SSH_KEY (or HPC_KEY_PATH) "
+                "to an SSH private-key path, or HPC_PASSWORD, in your environment/.env "
+                "— the same credentials the fpocket/DiffSBDD arms use. Also ensure "
+                f"HPC_USER is set (currently: {self.username!r})."
+            )
+
+        if not self.username:
+            raise ValueError(
+                "HPC_USER is not set. Set it to your cluster username (e.g. HPC_USER=mani.na) "
+                "so jobs are submitted as you and written to your scratch path."
+            )
         
         self.ssh_client.connect(**connect_kwargs)
         self.sftp_client = self.ssh_client.open_sftp()
@@ -842,7 +932,11 @@ properties:
         logger.debug("SSH connection closed")
     
     def _create_remote_directory(self, path: str):
-        """Create directory on remote server."""
+        """Create directory on remote server (or locally in local_mode)."""
+        if self.local_mode:
+            os.makedirs(path, exist_ok=True)
+            logger.debug(f"Created local directory: {path}")
+            return
         stdin, stdout, stderr = self.ssh_client.exec_command(f"mkdir -p {path}")
         stdout.read()
         logger.debug(f"Created remote directory: {path}")
@@ -851,7 +945,14 @@ properties:
         """Upload content as file to remote server."""
         # Convert Windows line endings to Unix line endings
         content = content.replace('\r\n', '\n')
-        
+
+        if self.local_mode:
+            os.makedirs(os.path.dirname(remote_path) or ".", exist_ok=True)
+            with open(remote_path, 'w', newline='\n') as f:
+                f.write(content)
+            logger.debug(f"Wrote content (local) to {remote_path}")
+            return
+
         with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt', newline='\n') as f:
             f.write(content)
             temp_path = f.name
@@ -863,7 +964,11 @@ properties:
             os.unlink(temp_path)
     
     def _download_file(self, remote_path: str) -> str:
-        """Download file from remote server."""
+        """Download file from remote server (or read locally in local_mode)."""
+        if self.local_mode:
+            with open(remote_path, 'r') as f:
+                return f.read()
+
         with tempfile.NamedTemporaryFile(mode='r', delete=False) as f:
             temp_path = f.name
         
@@ -876,7 +981,9 @@ properties:
             os.unlink(temp_path)
     
     def _file_exists(self, remote_path: str) -> bool:
-        """Check if file exists on remote server."""
+        """Check if file exists on remote server (or locally in local_mode)."""
+        if self.local_mode:
+            return os.path.exists(remote_path)
         try:
             self.sftp_client.stat(remote_path)
             return True
@@ -885,6 +992,28 @@ properties:
     
     def _submit_job(self, script_path: str) -> str:
         """Submit SLURM job and return job ID."""
+        if self.local_mode:
+            # Normalize line endings locally, then sbatch via subprocess.
+            try:
+                with open(script_path, 'r') as f:
+                    txt = f.read().replace('\r\n', '\n').replace('\r', '\n')
+                with open(script_path, 'w', newline='\n') as f:
+                    f.write(txt)
+            except Exception as e:
+                logger.warning(f"Could not normalize script line endings: {e}")
+            proc = subprocess.run(
+                ["sbatch", os.path.basename(script_path)],
+                cwd=os.path.dirname(script_path) or ".",
+                capture_output=True, text=True,
+            )
+            output, error = proc.stdout, proc.stderr
+            import re as _re
+            m = _re.search(r'Submitted batch job (\d+)', output + error)
+            if m:
+                logger.info(f"SLURM job submitted locally: {m.group(1)}")
+                return m.group(1)
+            raise RuntimeError(f"Local sbatch failed. Output: {output} Error: {error}")
+
         # First, convert the script file to Unix format on the remote server
         convert_cmd = f"dos2unix {script_path} 2>/dev/null || sed -i 's/\r$//' {script_path}"
         stdin, stdout, stderr = self.ssh_client.exec_command(convert_cmd)

@@ -1,12 +1,14 @@
 """
 Analysis nodes for LangGraph pipeline.
 
-This module will contain:
-- results_analyzer_node: Analyzes screening results and creates report
+This module contains:
+- results_analyzer_node: Analyzes Boltz-2 screening results and creates the report
 
-Generates the final drug discovery report.
+Generates the final drug discovery report (terminal stage, shared by all branches).
 """
 
-# TODO: Implement analysis nodes
+from fade.agents.analysis.langgraph_nodes import results_analyzer_node
 
-__all__ = []
+__all__ = [
+    "results_analyzer_node",
+]

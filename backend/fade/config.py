@@ -122,6 +122,19 @@ class Config:
     BOLTZ2_USE_MSA = True  # Whether to use Multiple Sequence Alignment
     BOLTZ2_NUM_MODELS = 1  # Number of models to generate
     BOLTZ_CACHE_DIR = os.getenv("BOLTZ_CACHE_DIR", None)
+
+    # Boltz2 Binding-Affinity Screening Configuration
+    # Shared screening engine used by all three F.A.D.E branches (holo/apo/de-novo).
+    # Boltz2 scores one ligand per job, so a batch screen submits one job per molecule.
+    BOLTZ2_ENABLE_AFFINITY = os.getenv("BOLTZ2_ENABLE_AFFINITY", "true").lower() == "true"
+    BOLTZ2_AFFINITY_MAX_WAIT_TIME = int(os.getenv("BOLTZ2_AFFINITY_MAX_WAIT_TIME", "3600"))  # seconds per ligand
+    BOLTZ2_AFFINITY_POLL_INTERVAL = int(os.getenv("BOLTZ2_AFFINITY_POLL_INTERVAL", "30"))  # seconds
+    BOLTZ2_AFFINITY_GPU_PARTITION = os.getenv("BOLTZ2_AFFINITY_PARTITION", BOLTZ2_GPU_PARTITION)  # reuse structure partition by default
+    BOLTZ2_AFFINITY_MAX_LIGAND_ATOMS = int(os.getenv("BOLTZ2_AFFINITY_MAX_LIGAND_ATOMS", "150"))  # skip oversized ligands
+    BOLTZ2_AFFINITY_MAX_LIGANDS = int(os.getenv("BOLTZ2_AFFINITY_MAX_LIGANDS", "25"))  # cap ligands screened per run
+    BOLTZ2_AFFINITY_BINDER_PROBABILITY_THRESHOLD = float(
+        os.getenv("BOLTZ2_AFFINITY_BINDER_PROBABILITY_THRESHOLD", "0.5")
+    )  # probability above which a ligand is flagged a likely binder
     
     @classmethod
     def get_api_headers(cls, api_name: str) -> Dict[str, str]:

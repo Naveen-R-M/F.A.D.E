@@ -35,6 +35,13 @@ from fade.agents.invention.langgraph_nodes import (
     molecule_generator_node,
     medicinal_filter_node
 )
+from fade.agents.screening.langgraph_nodes import (
+    boltz2_screener_node,
+    should_continue_screening
+)
+from fade.agents.analysis.langgraph_nodes import (
+    results_analyzer_node
+)
 from fade.config import config
 from fade.utils import get_logger
 
@@ -219,10 +226,10 @@ async def create_drug_discovery_graph():
     workflow.add_node("pocket_from_ligand", pocket_from_ligand_node)  # New node
     workflow.add_node("molecule_generator", molecule_generator_node)
     workflow.add_node("medicinal_filter", medicinal_filter_node)
-    
-    # TODO: Add these nodes when implemented
-    # workflow.add_node("boltz2_screener", boltz2_screener_node)
-    # workflow.add_node("results_analyzer", results_analyzer_node)
+
+    # Screening + analysis nodes (shared tail for all three branches)
+    workflow.add_node("boltz2_screener", boltz2_screener_node)
+    workflow.add_node("results_analyzer", results_analyzer_node)
 
     # Add a router node that decides where to start based on the query
     workflow.add_node("entry_router", entry_router_node)
@@ -296,13 +303,12 @@ async def create_drug_discovery_graph():
         }
     )
     
-    # Pocket Ranker -> Molecule Generator
+    # Pocket Ranker -> Molecule Generator (Apo / de-novo path)
     workflow.add_conditional_edges(
         "pocket_ranker",
         should_continue_targeting,
         {
-            # "continue": "molecule_generator",
-            "continue": END,
+            "continue": "molecule_generator",
             "end": END
         }
     )
@@ -312,8 +318,7 @@ async def create_drug_discovery_graph():
         "pocket_from_ligand",
         should_continue_targeting,  # Reuse same logic
         {
-            # "continue": "molecule_generator",
-            "continue": END,
+            "continue": "molecule_generator",
             "end": END
         }
     )
@@ -328,20 +333,28 @@ async def create_drug_discovery_graph():
         }
     )
     
-    # Medicinal Filter -> Next step (screening)
+    # Medicinal Filter -> Boltz-2 Screener (shared binding-affinity screening)
     workflow.add_conditional_edges(
         "medicinal_filter",
         should_continue_filtering,
         {
-            "continue": END,  # Will be boltz2_screener when implemented
+            "continue": "boltz2_screener",
             "end": END
         }
     )
-    
-    # TODO: Add more edges as nodes are implemented
-    # workflow.add_edge("medicinal_filter", "boltz2_screener")
-    # workflow.add_edge("boltz2_screener", "results_analyzer")
-    # workflow.add_edge("results_analyzer", END)
+
+    # Boltz-2 Screener -> Results Analyzer
+    workflow.add_conditional_edges(
+        "boltz2_screener",
+        should_continue_screening,
+        {
+            "continue": "results_analyzer",
+            "end": END
+        }
+    )
+
+    # Results Analyzer -> END
+    workflow.add_edge("results_analyzer", END)
 
     # Set up the memory. This will create a 'fade_memory.sqlite' file.
     app = workflow.compile(checkpointer=memory) # type: ignore

@@ -10,7 +10,7 @@
 
 ## What is F.A.D.E?
 
-F.A.D.E is an AI-powered drug discovery system that understands natural language and automatically runs computational drug discovery pipelines. Instead of manually setting up complex bioinformatics workflows, you simply describe what you want to discover.
+F.A.D.E is an AI-powered drug discovery system that understands natural language and automatically runs computational drug discovery pipelines. Instead of manually setting up complex workflows, you simply describe what you want to discover.
 
 ### The Problem F.A.D.E Solves
 

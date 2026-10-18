@@ -332,7 +332,7 @@ class HPCDiffSBDDClient:
             smiles_file = f"{remote_dir}/outputs/molecules.smi"
             
             obabel_cmd = f"""
-module load openbabel
+module load OpenBabel/2.4.1
 obabel {remote_sdf} -O {smiles_file} -h
 """
             

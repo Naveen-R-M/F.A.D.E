@@ -77,8 +77,11 @@ class FpocketClient:
         Returns:
             List of detected pockets
         """
-        # Try HPC first if available
-        if HPC_AVAILABLE and os.getenv("HPC_USER"):
+        # Try HPC first if available. HPC execution is enabled either by
+        # HPC_USER (remote SSH mode) or FADE_LOCAL_HPC=1 (we are already on the
+        # cluster and the HPC clients submit SLURM jobs directly).
+        local_hpc = os.getenv("FADE_LOCAL_HPC", "").strip().lower() in ("1", "true", "yes", "on")
+        if HPC_AVAILABLE and (os.getenv("HPC_USER") or local_hpc):
             logger.info("Using HPC fpocket")
             hpc_client = get_hpc_fpocket_client()
             return hpc_client.detect_pockets(pdb_file, min_score)

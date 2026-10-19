@@ -58,6 +58,9 @@ def entry_router_node(state: DrugDiscoveryState) -> Dict[str, Any]:
     logger.info(f"[Entry Router] Query: {query[:100]}...")
     logger.info(f"[Entry Router] Is continuation: {is_continuation}")
     
+    if not is_continuation and (state.get("target_info") or {}).get("sequence"):
+        return {"routing_decision": "structure_resolver"}
+
     if is_continuation:
         # Check what we have in state
         has_target = state.get("target_info") is not None
@@ -466,7 +469,9 @@ def should_continue_filtering(state: DrugDiscoveryState) -> str:
     return "continue"
 
 
-async def run_drug_discovery_pipeline(app: Any, query: str, thread_config: RunnableConfig | None = None) -> Dict[str, Any]:
+async def run_drug_discovery_pipeline(app: Any, query: str, thread_config: RunnableConfig | None = None,
+                                      *, target_info=None, force_prediction=False,
+                                      pocket_detection_mode="auto") -> Dict[str, Any]:
     """
     Run the complete drug discovery pipeline.
     
@@ -489,7 +494,9 @@ async def run_drug_discovery_pipeline(app: Any, query: str, thread_config: Runna
         "user_id": None,
         "query": query,
         "messages": [HumanMessage(content=f"Starting drug discovery for: {query}")],
-        "target_info": None,
+        "target_info": target_info,
+        "force_prediction": force_prediction,
+        "pocket_detection_mode": pocket_detection_mode,
         "known_compounds": None,
         "structure": None,
         "structure_source": None,
@@ -510,7 +517,11 @@ async def run_drug_discovery_pipeline(app: Any, query: str, thread_config: Runna
     
     try:
         # Run the workflow
+        thread_config = thread_config or {"configurable": {"thread_id": run_id}}
         final_state = await app.ainvoke(initial_state, config=thread_config)
+        if not final_state.get("final_report") and not final_state.get("error"):
+            final_state["error"] = f"Pipeline stopped at {final_state.get('current_step')} without a report"
+            final_state["should_continue"] = False
         
         # Generate summary
         if final_state.get("target_info"):

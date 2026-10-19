@@ -135,7 +135,8 @@ def structure_resolver_node(state: DrugDiscoveryState) -> Dict[str, Any]:
     logger.info(f"[Structure Resolver] Finding structure for {uniprot_id}")
     
     # Option 1: Check existing PDB structures
-    existing_structures = target_info.get("existing_structures", [])
+    force_prediction = state.get("force_prediction", False)
+    existing_structures = [] if force_prediction else target_info.get("existing_structures", [])
     if existing_structures:
         # Pass target_info for enhanced selection with mutations and known compounds
         best_structure = _select_best_pdb(existing_structures, target_info)
@@ -172,7 +173,7 @@ def structure_resolver_node(state: DrugDiscoveryState) -> Dict[str, Any]:
     logger.info("No PDB structures available, checking AlphaFold database")
     
     # Option 2: Try AlphaFold database
-    if uniprot_id:
+    if uniprot_id and not force_prediction:
         alphafold_client = get_alphafold_client()
         
         # Check if AlphaFold structure exists with good confidence
@@ -284,8 +285,8 @@ def structure_wait_node(state: DrugDiscoveryState) -> Dict[str, Any]:
     # Wait for result (with timeout)
     pdb_content = boltz2_client.wait_for_structure(
         job_id=job_id,
-        max_wait=1800,  # 30 minutes
-        poll_interval=30  # Check every 30 seconds
+        max_wait=config.BOLTZ2_MAX_WAIT_TIME,
+        poll_interval=config.BOLTZ2_POLL_INTERVAL
     )
     
     if not pdb_content:
@@ -295,6 +296,20 @@ def structure_wait_node(state: DrugDiscoveryState) -> Dict[str, Any]:
             "current_step": "structure_failed"
         }
     
+    # The HPC adapter returns Boltz's native mmCIF, whereas fpocket requires PDB.
+    if pdb_content.lstrip().startswith("data_"):
+        from io import StringIO
+        from Bio.PDB import MMCIFParser, PDBIO
+        parsed = MMCIFParser(QUIET=True).get_structure("boltz2", StringIO(pdb_content))
+        output = StringIO()
+        writer = PDBIO()
+        writer.set_structure(parsed)
+        writer.save(output)
+        pdb_content = output.getvalue()
+    if not any(line.startswith("ATOM  ") for line in pdb_content.splitlines()):
+        return {"error": "Boltz-2 output contains no protein atoms", "should_continue": False,
+                "current_step": "structure_failed"}
+
     # Save structure
     target_name = state.get("target_info", {}).get("gene_name", "unknown")
     structure_path = _save_structure(pdb_content, f"boltz2_{target_name}_{job_id}.pdb")
@@ -303,7 +318,7 @@ def structure_wait_node(state: DrugDiscoveryState) -> Dict[str, Any]:
     structure_info.update({
         "structure_path": structure_path,
         "status": "completed",
-        "confidence_score": 80.0,  # Boltz-2 typical confidence
+        "confidence_score": None,  # Do not invent a measured confidence.
         "has_ligand": False,
         "ligand_names": []
     })

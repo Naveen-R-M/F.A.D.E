@@ -8,6 +8,8 @@ and transferring files to/from the HPC cluster.
 import logging
 import paramiko
 import os
+import shutil
+import subprocess
 from pathlib import Path
 from typing import Optional, Tuple, List
 import time
@@ -32,6 +34,7 @@ class HPCSSHClient:
         
         self.client = None
         self.sftp = None
+        self.local_mode = os.getenv("FADE_LOCAL_HPC", "").strip().lower() in ("1", "true", "yes", "on")
         
     def connect(self) -> bool:
         """
@@ -40,6 +43,8 @@ class HPCSSHClient:
         Returns:
             True if connection successful
         """
+        if self.local_mode:
+            return True
         try:
             self.client = paramiko.SSHClient()
             self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -84,6 +89,13 @@ class HPCSSHClient:
         Returns:
             Tuple of (stdout, stderr, exit_code)
         """
+        if self.local_mode:
+            try:
+                result = subprocess.run(["bash", "-lc", command], capture_output=True,
+                                        text=True, timeout=timeout)
+                return result.stdout, result.stderr, result.returncode
+            except Exception as exc:
+                return "", str(exc), 1
         if not self.client:
             if not self.connect():
                 return "", "Not connected to HPC", 1
@@ -122,6 +134,8 @@ class HPCSSHClient:
         Returns:
             True if upload successful
         """
+        if self.local_mode:
+            return self._copy_local(local_path, remote_path)
         if not self.sftp:
             if not self.connect():
                 return False
@@ -146,6 +160,8 @@ class HPCSSHClient:
         Returns:
             True if download successful
         """
+        if self.local_mode:
+            return self._copy_local(remote_path, local_path)
         if not self.sftp:
             if not self.connect():
                 return False
@@ -169,6 +185,8 @@ class HPCSSHClient:
         Returns:
             List of filenames
         """
+        if self.local_mode:
+            return os.listdir(remote_path)
         if not self.sftp:
             if not self.connect():
                 return []
@@ -217,6 +235,13 @@ class HPCSSHClient:
         Returns:
             True if upload successful
         """
+        if self.local_mode:
+            try:
+                Path(remote_path).parent.mkdir(parents=True, exist_ok=True)
+                Path(remote_path).write_text(content)
+                return True
+            except OSError:
+                return False
         if not self.sftp:
             if not self.connect():
                 return False
@@ -240,6 +265,17 @@ class HPCSSHClient:
             logger.error(f"Content upload failed: {e}")
             return False
     
+    @staticmethod
+    def _copy_local(source: str, destination: str) -> bool:
+        try:
+            Path(destination).parent.mkdir(parents=True, exist_ok=True)
+            if Path(source).resolve() != Path(destination).resolve():
+                shutil.copy2(source, destination)
+            return True
+        except OSError as exc:
+            logger.error(f"Local HPC copy failed: {exc}")
+            return False
+
     def close(self):
         """Close SSH connection."""
         try:

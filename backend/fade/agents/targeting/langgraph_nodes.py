@@ -31,9 +31,16 @@ def determine_pocket_detection_strategy(state: DrugDiscoveryState) -> Dict[str, 
         Dictionary with strategy details
     """
     structure = state.get("structure", {})
-    structure_source = structure.get("source", "unknown")
+    structure_source = structure.get("source", "unknown").lower()
+    mode = state.get("pocket_detection_mode", "auto")
+    if mode == "fpocket":
+        return {"use_consensus": False, "tools": ["fpocket"], "min_agreement": 1,
+                "structure_source": structure_source, "reason": "Explicit fpocket-only selection"}
+    if mode != "auto":
+        raise ValueError(f"Unknown pocket_detection_mode: {mode}")
     has_ligand = structure.get("has_ligand", False)
-    confidence = structure.get("confidence", 100)
+    confidence = structure.get("confidence_score")
+    confidence = 100 if confidence is None else confidence
     
     strategy = {
         "use_consensus": False,

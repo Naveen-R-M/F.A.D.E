@@ -6,6 +6,8 @@ to generate novel drug-like molecules for binding pockets.
 """
 
 import logging
+import os
+import shlex
 import uuid
 import time
 import re
@@ -249,16 +251,16 @@ class HPCDiffSBDDClient:
         
         # Parse SDF file to extract molecules
         try:
-            # We'll need RDKit for proper parsing, but for now let's extract basic info
-            molecules = self._parse_sdf_basic(local_sdf)
-            
-            # Also try to convert to SMILES using OpenBabel on HPC
-            smiles_list = self._convert_to_smiles_hpc(remote_sdf, remote_dir)
-            
-            # Combine SDF data with SMILES
+            # Parse each SDF record with RDKit to preserve molecule/SMILES identity.
+            # A converter that skips invalid records would shift all later IDs.
+            from rdkit import Chem
+            for index, parsed in enumerate(Chem.SDMolSupplier(str(local_sdf)), 1):
+                if parsed is None:
+                    logger.warning(f"Skipping invalid SDF record {index}")
+                    continue
+                molecules.append({"molecule_number": index, "smiles": Chem.MolToSmiles(parsed),
+                                  "sdf_block": Chem.MolToMolBlock(parsed) + "$$$$\n"})
             for i, mol in enumerate(molecules):
-                if i < len(smiles_list):
-                    mol["smiles"] = smiles_list[i]
                 mol["molecule_id"] = f"diffsbdd_{job_id}_{i+1}"
                 mol["generation_method"] = "DiffSBDD"
                 mol["source_file"] = str(local_sdf)
@@ -332,6 +334,7 @@ class HPCDiffSBDDClient:
             smiles_file = f"{remote_dir}/outputs/molecules.smi"
             
             obabel_cmd = f"""
+module use {self.module_path}
 module load OpenBabel/2.4.1
 obabel {remote_sdf} -O {smiles_file} -h
 """
@@ -382,6 +385,13 @@ obabel {remote_sdf} -O {smiles_file} -h
         diffsbdd_path = "/projects/SimBioSys/share/software/DiffSBDD"
         checkpoint_path = f"{diffsbdd_path}/checkpoints/crossdocked_fullatom_cond.ckpt"
         env_path = f"{diffsbdd_path}/env/"
+        python_override = os.getenv("DIFFSBDD_PYTHON", "").strip()
+        if python_override:
+            env_setup = f"export PATH={shlex.quote(str(Path(python_override).parent))}:$PATH"
+            python_cmd = shlex.quote(python_override)
+        else:
+            env_setup = f'eval "$(micromamba shell hook --shell bash)"\nmicromamba activate {shlex.quote(env_path)}'
+            python_cmd = "python"
         
         # Build residue list argument only if residues are provided
         resi_list_arg = ""
@@ -413,13 +423,12 @@ echo "======================================================"
 module use {self.module_path}
 module load diffsbdd
 
-# Activate micromamba environment
-eval "$(micromamba shell hook --shell bash)"
-micromamba activate {env_path}
+# Use an explicitly configured interpreter, or activate the shared environment.
+{env_setup}
 
-echo "Environment activated"
-echo "Python: $(which python)"
-echo "PyTorch version: $(python -c 'import torch; print(torch.__version__)')"
+echo "Environment configured"
+echo "Python: {python_cmd}"
+echo "PyTorch version: $({python_cmd} -c 'import torch; print(torch.__version__)')"
 
 # Change to working directory
 cd {remote_dir}
@@ -427,7 +436,7 @@ cd {remote_dir}
 # Run DiffSBDD generation
 # Note: checkpoint is a positional argument and must come first
 echo "Running DiffSBDD..."
-python {diffsbdd_path}/generate_ligands.py \\
+{python_cmd} {diffsbdd_path}/generate_ligands.py \\
     {checkpoint_path} \\
     --pdbfile {remote_pdb} \\
     {resi_list_arg}
@@ -519,23 +528,10 @@ exit $EXIT_CODE
         Returns:
             List of residue strings in format "CHAIN:RESNUM"
         """
-        formatted_residues = []
-        
-        if pocket.get("residues"):
-            for res in pocket["residues"]:
-                # Parse residue string (e.g., "GLY12" -> "A:12")
-                match = re.match(r'([A-Z]{3})(\d+)', res)
-                if match:
-                    res_num = match.group(2)
-                    # Assume chain A if not specified
-                    formatted_residues.append(f"A:{res_num}")
-        
-        # For KRAS G12C, ensure we include key residues
-        if not formatted_residues:
-            # Default KRAS G12C binding site residues
-            formatted_residues = ["A:12", "A:61", "A:116"]
-        
-        return formatted_residues
+        residues = pocket.get("residues") or []
+        if not residues or any(not re.fullmatch(r"[^\s:]:-?\d+", r) for r in residues):
+            raise ValueError("Explicit CHAIN:RESNUM pocket residues are required")
+        return list(dict.fromkeys(residues))
 
 
 # Singleton instance

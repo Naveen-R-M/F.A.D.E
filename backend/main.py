@@ -3,11 +3,12 @@ Main entry point for F.A.D.E drug discovery pipeline using LangGraph.
 """
 
 import sys
+import asyncio
 import argparse
 import json
 from pathlib import Path
 
-from fade.workflows.drug_discovery import run_drug_discovery_pipeline
+from fade.workflows.drug_discovery import run_drug_discovery_pipeline, create_drug_discovery_graph
 from fade.config import config
 from fade.utils import setup_logging, get_logger
 
@@ -58,7 +59,20 @@ Examples:
         help="Disable rich console output"
     )
     
+    parser.add_argument("--fasta", type=Path, help="Single protein FASTA; bypass target research")
+    parser.add_argument("--force-prediction", action="store_true", help="Skip PDB and AlphaFold lookup")
+    parser.add_argument("--pocket-mode", choices=["auto", "fpocket"], default="auto")
+    parser.add_argument("--state-output", type=Path, help="Write complete final state as JSON")
     args = parser.parse_args()
+    target_info = None
+    if args.fasta:
+        from Bio import SeqIO
+        record = SeqIO.read(args.fasta, "fasta")
+        sequence = str(record.seq).upper()
+        if not sequence or set(sequence) - set("ACDEFGHIKLMNPQRSTVWY"):
+            parser.error("FASTA must contain one protein with standard amino acids")
+        target_info = {"protein_name": record.description, "sequence": sequence,
+                       "sequence_length": len(sequence)}
     
     # Set up logging
     log_level = "DEBUG" if args.verbose else "INFO"
@@ -66,7 +80,8 @@ Examples:
     
     # Validate configuration
     try:
-        config.validate()
+        if not args.fasta:
+            config.validate()
     except ValueError as e:
         logger.error(f"Configuration error: {e}")
         logger.info("Please check your .env file")
@@ -76,7 +91,19 @@ Examples:
     logger.info(f"Starting F.A.D.E pipeline with LangGraph")
     logger.info(f"Query: {args.query}")
     
-    final_state = run_drug_discovery_pipeline(args.query, args.user_id)
+    async def run():
+        app = await create_drug_discovery_graph()
+        try:
+            return await run_drug_discovery_pipeline(
+                app, args.query, target_info=target_info,
+                force_prediction=args.force_prediction, pocket_detection_mode=args.pocket_mode)
+        finally:
+            await app.checkpointer.conn.close()
+
+    final_state = asyncio.run(run())
+    if args.state_output:
+        args.state_output.parent.mkdir(parents=True, exist_ok=True)
+        args.state_output.write_text(json.dumps(final_state, indent=2, default=str))
     
     # Output results
     if args.output_format == "json":

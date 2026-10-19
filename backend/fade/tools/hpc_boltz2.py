@@ -243,19 +243,29 @@ sequences:
                 if self._file_exists(out_file):
                     out_content = self._download_file(out_file) or ""
                     if "Boltz2 exit code:" in out_content:
-                        # Job has finished. We got here without finding a CIF
-                        # above, so it finished WITHOUT producing a structure.
-                        error_file = f"{remote_dir}/boltz2.err"
-                        err_content = ""
-                        if self._file_exists(error_file):
-                            err_content = self._download_file(error_file) or ""
-                        err_tail = "\n".join(err_content.strip().splitlines()[-15:])
-                        logger.error(
-                            "Boltz2 structure job finished without producing a "
-                            f"structure.\n--- stdout tail ---\n{out_content.strip()[-800:]}\n"
-                            f"--- stderr tail ---\n{err_tail}"
-                        )
-                        return None
+                        # The SLURM script prints the exit-code marker BEFORE it
+                        # copies the CIF into output/ (observed gap: ~22 s), so
+                        # keep polling for outputs through a grace window before
+                        # declaring the run failed.
+                        deadline = time.time() + 60
+                        found = any(self._file_exists(f) for f in possible_outputs)
+                        while not found and time.time() < deadline:
+                            time.sleep(10)
+                            found = any(self._file_exists(f) for f in possible_outputs)
+                        if not found:
+                            # Job finished, grace window elapsed, no CIF anywhere:
+                            # genuine failure.
+                            error_file = f"{remote_dir}/boltz2.err"
+                            err_content = ""
+                            if self._file_exists(error_file):
+                                err_content = self._download_file(error_file) or ""
+                            err_tail = "\n".join(err_content.strip().splitlines()[-15:])
+                            logger.error(
+                                "Boltz2 structure job finished without producing a "
+                                f"structure.\n--- stdout tail ---\n{out_content.strip()[-800:]}\n"
+                                f"--- stderr tail ---\n{err_tail}"
+                            )
+                            return None
 
                 logger.debug(f"Waiting for Boltz2... ({int(time.time() - start_time)}s elapsed)")
                 time.sleep(poll_interval)
@@ -608,6 +618,12 @@ properties:
             "# Load modules",
             f"module use {self.module_path}",
             f"module load {self.boltz2_module}",
+            "",
+            "# Optional private-environment overlay (e.g. a repaired conda env",
+            "# that shadows the shared install). Unset -> shared module only.",
+            "if [ -n \"${FADE_PRIVATE_ENV:-}\" ]; then",
+            "    export PATH=\"$FADE_PRIVATE_ENV/bin:$PATH\"",
+            "fi",
         ]
 
     def _create_affinity_script(self,
@@ -680,11 +696,11 @@ properties:
 
         script_lines.extend([
             f"    --accelerator {device_val} \\",
+            "    --no_kernels \\",
             "    --seed 42 \\",
             f"    \"{input_file}\"",
             "",
             "EXIT_CODE=$?",
-            "echo \"Boltz2 affinity exit code: $EXIT_CODE\"",
             "",
             "if [ $EXIT_CODE -eq 0 ]; then",
             "    echo \"Boltz2 affinity completed successfully\"",
@@ -711,6 +727,9 @@ properties:
             "    echo \"Boltz2 affinity failed with exit code $EXIT_CODE\"",
             "fi",
             "",
+            "# Completion marker goes AFTER all copying so the parent's poll loop",
+            "# never sees 'finished but no output' mid-copy.",
+            "echo \"Boltz2 affinity exit code: $EXIT_CODE\"",
             "echo \"Job completed at $(date)\"",
             "exit $EXIT_CODE",
         ])
@@ -816,7 +835,6 @@ properties:
             "",
             "# Capture exit code",
             "EXIT_CODE=$?",
-            "echo \"Boltz2 exit code: $EXIT_CODE\"",
             "",
             "# Check for output files regardless of exit code",
             "# The error might be non-fatal since we see 100% progress",
@@ -869,6 +887,9 @@ properties:
             "    echo \"Boltz2 failed with exit code $EXIT_CODE\"",
             "fi",
             "",
+            "# Completion marker goes AFTER all copying so the parent's poll loop",
+            "# never sees 'finished but no output' mid-copy.",
+            "echo \"Boltz2 exit code: $EXIT_CODE\"",
             "echo \"Job completed at $(date)\"",
             "",
             "# Ensure Slurm gets the correct exit code",

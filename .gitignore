@@ -1,0 +1,21 @@
+# Runtime artifacts (pipeline outputs, job scratch, caches)
+backend/data/
+backend/output/
+backend/logs/
+backend/fade_memory.sqlite
+*.sqlite
+
+# HPC job working directories created by the FADE clients
+boltz2_jobs/
+boltz2_affinity_jobs/
+diffsbdd_inputs/
+fpocket_inputs/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Environment / secrets
+.env

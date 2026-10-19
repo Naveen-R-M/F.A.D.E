@@ -140,11 +140,15 @@ fpocket -f {pdb_filename}
                 if not volume_match:
                     volume_match = re.search(r'Volume\s*:\s*([\d.]+)', section)
                 
-                # Extract residues
-                residues = []
-                residue_matches = re.findall(r'([A-Z]{3})\s+(\d+)\s+([A-Z])', section)
-                for res_match in residue_matches[:10]:  # Limit to first 10 residues
-                    residues.append(f"{res_match[0]}{res_match[1]}")
+                # fpocket's info file contains metrics, not residue identities.
+                pocket_file = f"{remote_dir}/{pdb_stem}_out/pockets/pocket{i}_atm.pdb"
+                atoms, error, status = self.ssh_client.execute_command(f"cat {pocket_file}")
+                if status:
+                    raise RuntimeError(f"Cannot read pocket atoms: {error}")
+                residues = sorted({f"{line[21].strip()}:{int(line[22:26])}"
+                                   for line in atoms.splitlines() if line.startswith("ATOM  ")})
+                if not residues:
+                    raise ValueError("Pocket contains no protein residues")
                 
                 # Get scores
                 score = float(score_match.group(1)) if score_match else 0.0

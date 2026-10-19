@@ -57,6 +57,13 @@ def molecule_generator_node(state: DrugDiscoveryState) -> Dict[str, Any]:
     
     # Format pocket residues for DiffSBDD
     pocket_residues = _format_pocket_residues(selected_pocket)
+    from Bio.PDB import PDBParser
+    protein = PDBParser(QUIET=True).get_structure("target", structure_path)[0]
+    valid = {f"{chain.id}:{res.id[1]}" for chain in protein for res in chain
+             if res.id[0] == " " and res.id[2] == " "}
+    if not pocket_residues or not set(pocket_residues).issubset(valid):
+        return {"error": "Pocket residues are missing or do not match the protein PDB",
+                "should_continue": False, "current_step": "molecule_generation_failed"}
     
     # Use existing job_id if available (from fpocket), otherwise generate new one
     job_id = state.get("job_id")
@@ -181,7 +188,9 @@ def medicinal_filter_node(state: DrugDiscoveryState) -> Dict[str, Any]:
             filtered_molecules.append(filtered_mol)
             filter_stats["passed"] += 1
         else:
-            if "lipinski" in filter_result.get("reason", ""):
+            if filter_result.get("reason") == "invalid_smiles":
+                filter_stats["invalid_smiles"] += 1
+            elif "lipinski" in filter_result.get("reason", ""):
                 filter_stats["lipinski_violations"] += 1
             else:
                 filter_stats["property_violations"] += 1
@@ -217,32 +226,24 @@ def _format_pocket_residues(pocket: Dict[str, Any]) -> List[str]:
     """
     Format pocket residues for DiffSBDD input.
     
-    For now, we return an empty list to let DiffSBDD use the whole protein.
-    This avoids chain/residue numbering issues.
+    Preserve explicit chain and residue numbering; never substitute a generic site.
     
     Args:
         pocket: Pocket information
         
     Returns:
-        Empty list (DiffSBDD will use whole protein)
+        Unique residue identifiers in CHAIN:RESNUM format
     """
-    # DiffSBDD can work without specific residue list
-    # It will generate molecules for the whole protein
-    # This avoids KeyError issues with chain/residue numbering
-    logger.info(f"Using whole protein for molecule generation (pocket: {pocket.get('pocket_id')})")
-    
-    if pocket.get("center"):
-        center = pocket["center"]
-        logger.info(f"Pocket center at: ({center[0]:.2f}, {center[1]:.2f}, {center[2]:.2f})")
-    
-    return []
+    import re
+    residues = pocket.get("residues") or []
+    if not residues or any(not re.fullmatch(r"[^\s:]:-?\d+", r) for r in residues):
+        raise ValueError("Pocket must contain explicit CHAIN:RESNUM residue identities")
+    return list(dict.fromkeys(residues))
 
 
 def _apply_simple_filters(mol: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Apply simple drug-likeness filters without RDKit.
-    
-    This is a simplified version. In production, use RDKit for accurate calculations.
+    Apply basic RDKit physicochemical filters (not a safety or efficacy assessment).
     
     Args:
         mol: Molecule dictionary
@@ -252,26 +253,15 @@ def _apply_simple_filters(mol: Dict[str, Any]) -> Dict[str, Any]:
     """
     smiles = mol.get("smiles", "")
     
-    # Estimate properties from SMILES (very approximate!)
-    # In production, use RDKit for accurate calculations
-    
-    # Estimate molecular weight (very rough)
-    mw_estimate = len(smiles) * 12  # Very rough approximation
-    
-    # Count some functional groups
-    n_nitrogen = smiles.count('N')
-    n_oxygen = smiles.count('O')
-    n_sulfur = smiles.count('S')
-    n_fluorine = smiles.count('F')
-    n_chlorine = smiles.count('Cl')
-    n_bromine = smiles.count('Br')
-    
-    # Estimate HBA/HBD
-    hba_estimate = n_nitrogen + n_oxygen
-    hbd_estimate = smiles.count('NH') + smiles.count('OH')
-    
-    # Estimate LogP (very rough)
-    logp_estimate = len(smiles) * 0.1 - n_oxygen * 0.5 - n_nitrogen * 0.3
+    from rdkit import Chem
+    from rdkit.Chem import Descriptors, Crippen, Lipinski, QED
+    parsed = Chem.MolFromSmiles(smiles)
+    if parsed is None:
+        return {"passed": False, "reason": "invalid_smiles", "properties": {}}
+    mw_estimate = Descriptors.MolWt(parsed)
+    hba_estimate = Lipinski.NumHAcceptors(parsed)
+    hbd_estimate = Lipinski.NumHDonors(parsed)
+    logp_estimate = Crippen.MolLogP(parsed)
     
     # Apply Lipinski's Rule of Five
     violations = 0
@@ -293,33 +283,18 @@ def _apply_simple_filters(mol: Dict[str, Any]) -> Dict[str, Any]:
         violations += 1
         warnings.append(f"HBD estimate ({hbd_estimate}) > 5")
     
-    # Check for PAINS patterns (simplified)
-    pains_patterns = [
-        'N=N',  # Azo compounds
-        'S(=O)(=O)O',  # Sulfonates
-        'C(=O)C(=O)',  # Diketones
-        '[N+](=O)[O-]',  # Nitro groups (can be problematic)
-    ]
-    
-    has_pains = any(pattern in smiles for pattern in pains_patterns)
+    from rdkit.Chem.FilterCatalog import FilterCatalog, FilterCatalogParams
+    params = FilterCatalogParams()
+    params.AddCatalog(FilterCatalogParams.FilterCatalogs.PAINS)
+    has_pains = FilterCatalog(params).HasMatch(parsed)
     if has_pains:
-        warnings.append("Contains potential PAINS alert")
-    
-    # Calculate QED score (simplified)
-    qed_score = max(0, min(1, 1 - violations * 0.25))
-    
-    # Synthetic accessibility (simplified)
-    sa_score = 3.0  # Default moderate difficulty
-    if len(smiles) > 50:
-        sa_score += 1.0
-    if 'B' in smiles or '[' in smiles:
-        sa_score += 1.0
-    
-    passed = violations <= 1 and not has_pains
+        warnings.append("Contains a PAINS alert")
+    qed_score = QED.qed(parsed)
+    passed = violations <= 1 and not has_pains and mw_estimate >= 150
     
     return {
         "passed": passed,
-        "reason": "lipinski" if violations > 1 else ("pains" if has_pains else ""),
+        "reason": "lipinski" if violations > 1 else ("pains" if has_pains else ("MW<150" if mw_estimate < 150 else "")),
         "warnings": warnings,
         "properties": {
             "mol_weight": mw_estimate,
@@ -328,7 +303,7 @@ def _apply_simple_filters(mol: Dict[str, Any]) -> Dict[str, Any]:
             "hbd": hbd_estimate,
             "lipinski_violations": violations,
             "qed_score": qed_score,
-            "sa_score": sa_score,
+            "sa_score": None,  # Not calculated; do not fabricate a score.
             "has_pains_alert": has_pains
         }
     }

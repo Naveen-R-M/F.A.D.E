@@ -5,7 +5,8 @@ This module defines the state that flows through the LangGraph nodes.
 """
 
 # --- Import NotRequired ---
-from typing import TypedDict, Optional, List, Dict, Any, Annotated, NotRequired
+from typing import Optional, List, Dict, Any, Annotated
+from typing_extensions import TypedDict, NotRequired
 from datetime import datetime
 from langgraph.graph.message import add_messages
 
@@ -24,6 +25,14 @@ class DrugDiscoveryState(TypedDict):
     current_step: Optional[str] # Included as required since it's in initial_state
     
     # --- NotRequired fields (key can be omitted) ---
+    force_prediction: NotRequired[bool]
+    pocket_detection_mode: NotRequired[str]
+    pocket_detection_metadata: NotRequired[Dict[str, Any]]
+    pocket_selection_rationale: NotRequired[str]
+    generation_parameters: NotRequired[Dict[str, Any]]
+    filter_statistics: NotRequired[Dict[str, Any]]
+    screening_metadata: NotRequired[Dict[str, Any]]
+    error_type: NotRequired[str]
     job_id: NotRequired[Optional[str]]
     user_id: NotRequired[Optional[str]]
     

@@ -1,0 +1,57 @@
+{
+  "target": "sp|P09455|RET1_HUMAN Cellular Retinol-binding protein 1 (CRBP1) GN=RBP1",
+  "structure_source": "Boltz2",
+  "pocket_id": "pocket_1",
+  "generated_at": "2026-10-19T14:33:43.778106",
+  "screening_metadata": {
+    "method": "Boltz-2 affinity",
+    "n_candidates": 2,
+    "n_screened": 2,
+    "n_failed": 0,
+    "n_likely_binders": 0,
+    "skipped_no_smiles": 0,
+    "skipped_too_large": 0,
+    "binder_probability_threshold": 0.5,
+    "pocket_id": "pocket_1"
+  },
+  "results": [
+    {
+      "molecule_id": "diffsbdd_81107de4_3",
+      "smiles": "Oc1ccccc1OC(O)(F)F",
+      "binding_affinity": -5.656774605482961,
+      "affinity_confidence": 0.15690526366233826,
+      "pose_path": "/scratch/rajagopalmohanraj.n/F.A.D.E/backend/data/poses/boltz2_affinity_boltz2aff_1792434507.cif",
+      "interactions": null,
+      "rmsd_from_pocket": null,
+      "strain_energy": null,
+      "affinity_pred_value": 1.85355544090271,
+      "affinity_probability_binary": 0.15690526366233826,
+      "predicted_ic50_uM": 71.37653167285912,
+      "likely_binder": false,
+      "pocket_id": "pocket_1",
+      "boltz2_job_id": "boltz2aff_1792434507",
+      "qed_score": 0.6677328943631438,
+      "mol_weight": 176.11799999999997,
+      "rank": 1
+    },
+    {
+      "molecule_id": "diffsbdd_81107de4_5",
+      "smiles": "CCN(C(=O)O)C(=O)c1ccc(C)cc1C",
+      "binding_affinity": -4.909463423029431,
+      "affinity_confidence": 0.24384254217147827,
+      "pose_path": "/scratch/rajagopalmohanraj.n/F.A.D.E/backend/data/poses/boltz2_affinity_boltz2aff_1792434264.cif",
+      "interactions": null,
+      "rmsd_from_pocket": null,
+      "strain_energy": null,
+      "affinity_pred_value": 2.4013383388519287,
+      "affinity_probability_binary": 0.24384254217147827,
+      "predicted_ic50_uM": 251.96390982512986,
+      "likely_binder": false,
+      "pocket_id": "pocket_1",
+      "boltz2_job_id": "boltz2aff_1792434264",
+      "qed_score": 0.8340033341616863,
+      "mol_weight": 221.25599999999997,
+      "rank": 2
+    }
+  ]
+}

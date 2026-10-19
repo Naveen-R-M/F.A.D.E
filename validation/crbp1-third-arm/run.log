@@ -1,0 +1,140 @@
+No broken requirements found.
+........                                                                 [100%]
+=============================== warnings summary ===============================
+backend/fade/models/structured_outputs.py:74
+  /scratch/rajagopalmohanraj.n/F.A.D.E/backend/fade/models/structured_outputs.py:74: PydanticDeprecatedSince20: `min_items` is deprecated and will be removed, use `min_length` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.14/migration/
+    suggestions: List[str] = Field(
+
+backend/fade/models/structured_outputs.py:74
+  /scratch/rajagopalmohanraj.n/F.A.D.E/backend/fade/models/structured_outputs.py:74: PydanticDeprecatedSince20: `max_items` is deprecated and will be removed, use `max_length` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.14/migration/
+    suggestions: List[str] = Field(
+
+backend/fade/models/guidance.py:22
+  /scratch/rajagopalmohanraj.n/F.A.D.E/backend/fade/models/guidance.py:22: PydanticDeprecatedSince20: `min_items` is deprecated and will be removed, use `min_length` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.14/migration/
+    suggestions: List[str] = Field(
+
+backend/fade/models/guidance.py:22
+  /scratch/rajagopalmohanraj.n/F.A.D.E/backend/fade/models/guidance.py:22: PydanticDeprecatedSince20: `max_items` is deprecated and will be removed, use `max_length` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.14/migration/
+    suggestions: List[str] = Field(
+
+backend/fade/models/guidance.py:129
+  /scratch/rajagopalmohanraj.n/F.A.D.E/backend/fade/models/guidance.py:129: PydanticDeprecatedSince20: `max_items` is deprecated and will be removed, use `max_length` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.14/migration/
+    retry_queries: List[str] = Field(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+8 passed, 5 warnings in 35.91s
+[10/19/26 14:14:04] INFO     Logging to                                         
+                             /scratch/rajagopalmohanraj.n/F.A.D.E/backend/logs/f
+                             ade_20261019_141404.log                            
+2026-10-19 14:14:11,618 - fade - INFO - Logging to /scratch/rajagopalmohanraj.n/F.A.D.E/backend/logs/fade_20261019_141411.log
+2026-10-19 14:14:11,619 - fade.main - INFO - Starting F.A.D.E pipeline with LangGraph
+2026-10-19 14:14:11,619 - fade.main - INFO - Query: Find inhibitors for CRBP1 from sequence
+2026-10-19 14:14:11,657 - fade.workflow.drug_discovery - INFO - Starting pipeline for query: Find inhibitors for CRBP1 from sequence
+2026-10-19 14:14:11,657 - fade.workflow.drug_discovery - INFO - Using simplified workflow: Query → RCSB → Structure/Pockets → Molecules
+2026-10-19 14:14:13,069 - fade.workflow.drug_discovery - INFO - [Entry Router] Query: Find inhibitors for CRBP1 from sequence...
+2026-10-19 14:14:13,069 - fade.workflow.drug_discovery - INFO - [Entry Router] Is continuation: False
+2026-10-19 14:14:13,070 - fade.workflow.drug_discovery - INFO - [Entry Router] Routing to: structure_resolver
+2026-10-19 14:14:13,071 - fade.nodes.structure - INFO - [Structure Resolver] Finding structure for None
+2026-10-19 14:14:13,071 - fade.nodes.structure - INFO - No PDB structures available, checking AlphaFold database
+2026-10-19 14:14:13,071 - fade.nodes.structure - INFO - No existing structure found, using Boltz-2 for prediction
+2026-10-19 14:14:13,071 - fade.tools.hpc_boltz2 - INFO - FADE_LOCAL_HPC set — Boltz2 HPC operations run LOCALLY (no SSH)
+2026-10-19 14:14:13,071 - fade.tools.hpc_boltz2 - INFO - Running Boltz2 prediction with job ID: boltz2_1792433653
+2026-10-19 14:14:29,294 - fade.tools.hpc_boltz2 - INFO - SLURM job submitted locally: 11230590
+2026-10-19 14:14:29,297 - fade.tools.hpc_boltz2 - INFO - Boltz2 job submitted with SLURM ID: 11230590
+2026-10-19 14:14:29,297 - fade.nodes.structure - INFO - Boltz-2 job submitted: boltz2_1792433653
+2026-10-19 14:14:29,298 - fade.workflow.drug_discovery - INFO - Structure source is Boltz2 and status is pending, moving to 'wait' state.
+2026-10-19 14:14:29,299 - fade.nodes.structure - INFO - [Structure Wait] Waiting for Boltz-2 job: boltz2_1792433653
+2026-10-19 14:14:29,299 - fade.tools.hpc_boltz2 - INFO - Waiting for Boltz2 job boltz2_1792433653 (max 3600s)
+2026-10-19 14:19:29,778 - fade.tools.hpc_boltz2 - INFO - Boltz2 structure ready for job boltz2_1792433653 at /scratch/rajagopalmohanraj.n/F.A.D.E/boltz2_jobs/boltz2_1792433653/output/predicted_structure.cif
+2026-10-19 14:19:29,819 - fade.tools.hpc_boltz2 - INFO - Downloaded confidence scores from /scratch/rajagopalmohanraj.n/F.A.D.E/boltz2_jobs/boltz2_1792433653/output/confidence_scores.json
+2026-10-19 14:19:30,241 - fade.nodes.structure - INFO - Saved structure to /scratch/rajagopalmohanraj.n/F.A.D.E/backend/data/structures/boltz2_unknown_boltz2_1792433653.pdb
+2026-10-19 14:19:30,244 - fade.nodes.targeting - INFO - [Pocket Mapper] Detecting pockets in /scratch/rajagopalmohanraj.n/F.A.D.E/backend/data/structures/boltz2_unknown_boltz2_1792433653.pdb
+2026-10-19 14:19:30,244 - fade.nodes.targeting - INFO - Detection strategy: Explicit fpocket-only selection
+2026-10-19 14:19:30,244 - fade.nodes.targeting - INFO - Using tools: fpocket
+2026-10-19 14:19:30,244 - fade.nodes.targeting - INFO - Generated new job_id: 8697d347
+2026-10-19 14:19:30,244 - fade.nodes.targeting - INFO - Running single-tool pocket detection (fpocket)...
+2026-10-19 14:19:30,363 - fade.tools.fpocket - ERROR - fpocket not found locally
+2026-10-19 14:19:30,364 - fade.tools.fpocket - INFO - Using HPC fpocket
+2026-10-19 14:19:30,364 - fade.tools.hpc_fpocket - INFO - Running fpocket on HPC with job ID: 81107de4
+2026-10-19 14:19:30,364 - fade.tools.hpc_fpocket - INFO - Creating remote directory: /scratch/rajagopalmohanraj.n/F.A.D.E/fpocket_inputs/81107de4
+2026-10-19 14:19:33,448 - fade.tools.hpc_fpocket - INFO - Uploading PDB to: /scratch/rajagopalmohanraj.n/F.A.D.E/fpocket_inputs/81107de4/boltz2_unknown_boltz2_1792433653.pdb
+2026-10-19 14:19:33,511 - fade.tools.hpc_fpocket - INFO - Running fpocket on HPC...
+2026-10-19 14:19:37,017 - fade.tools.hpc_fpocket - INFO - fpocket completed successfully
+2026-10-19 14:19:37,017 - fade.tools.hpc_fpocket - INFO - Downloading fpocket info file...
+2026-10-19 14:19:53,168 - fade.tools.hpc_fpocket - INFO - Parsed 1 pockets with score >= 0.5
+2026-10-19 14:19:53,221 - fade.tools.ssh_client - INFO - SSH connection closed
+2026-10-19 14:19:53,222 - fade.nodes.targeting - INFO - Updated job_id from fpocket: 81107de4
+2026-10-19 14:19:53,252 - fade.nodes.targeting - INFO - Found 1 potential binding pockets
+Best pocket: pocket_1
+  Druggability: 0.93
+  Confidence: 0.93
+  Volume: 934.4 Ų
+2026-10-19 14:19:53,254 - fade.nodes.targeting - INFO - [Pocket Ranker] Ranking 1 pockets
+2026-10-19 14:19:53,255 - fade.nodes.targeting - INFO - Selected pocket_1 as best pocket
+2026-10-19 14:19:53,257 - fade.nodes.invention - INFO - [Molecule Generator] Generating molecules for pocket pocket_1
+2026-10-19 14:19:53,279 - fade.nodes.invention - INFO - Using existing job_id from fpocket: 81107de4
+2026-10-19 14:19:53,279 - fade.nodes.invention - INFO - Requesting generation of 5 molecules
+2026-10-19 14:19:53,279 - fade.tools.hpc_diffsbdd - INFO - Running DiffSBDD on HPC with job ID: 81107de4
+2026-10-19 14:19:53,280 - fade.tools.hpc_diffsbdd - INFO - Creating remote directories for job 81107de4
+2026-10-19 14:19:58,144 - fade.tools.hpc_diffsbdd - INFO - Uploading PDB to: /scratch/rajagopalmohanraj.n/F.A.D.E/diffsbdd_inputs/81107de4/inputs/boltz2_unknown_boltz2_1792433653.pdb
+2026-10-19 14:20:00,232 - fade.tools.hpc_diffsbdd - INFO - Submitting DiffSBDD job to generate 5 molecules...
+2026-10-19 14:20:17,065 - fade.tools.hpc_diffsbdd - INFO - SLURM job submitted with ID: 11230672
+2026-10-19 14:20:17,065 - fade.tools.hpc_diffsbdd - INFO - Waiting for DiffSBDD job to complete...
+2026-10-19 14:20:22,057 - fade.tools.hpc_diffsbdd - INFO - Job 11230672 status: PENDING
+2026-10-19 14:20:58,031 - fade.tools.hpc_diffsbdd - INFO - Job 11230672 status: PENDING
+2026-10-19 14:21:32,675 - fade.tools.hpc_diffsbdd - INFO - Job 11230672 status: PENDING
+2026-10-19 14:22:07,059 - fade.tools.hpc_diffsbdd - INFO - Job 11230672 status: RUNNING
+2026-10-19 14:22:42,055 - fade.tools.hpc_diffsbdd - INFO - Job 11230672 status: RUNNING
+2026-10-19 14:23:16,761 - fade.tools.hpc_diffsbdd - INFO - Job 11230672 status: RUNNING
+2026-10-19 14:23:51,768 - fade.tools.hpc_diffsbdd - INFO - Job 11230672 status: RUNNING
+2026-10-19 14:24:23,926 - fade.tools.hpc_diffsbdd - INFO - DiffSBDD output file found, job completed
+2026-10-19 14:24:23,932 - fade.tools.hpc_diffsbdd - INFO - Downloading generated molecules from /scratch/rajagopalmohanraj.n/F.A.D.E/diffsbdd_inputs/81107de4/outputs/generated_ligands_81107de4.sdf
+2026-10-19 14:24:24,367 - fade.tools.hpc_diffsbdd - INFO - Generated 5 molecules
+2026-10-19 14:24:24,367 - fade.tools.ssh_client - INFO - SSH connection closed
+2026-10-19 14:24:24,367 - fade.nodes.invention - INFO - Successfully generated 5 molecules
+2026-10-19 14:24:24,369 - fade.nodes.invention - INFO - [Medicinal Filter] Filtering 5 molecules
+2026-10-19 14:24:24,763 - fade.nodes.invention - INFO - Limiting to top 2 molecules for screening
+2026-10-19 14:24:24,766 - fade.nodes.invention - INFO - Filtered to 2 drug-like molecules
+2026-10-19 14:24:24,769 - fade.nodes.screening - INFO - [Screener] Screening 2 ligand(s) against target (135 aa) with Boltz-2 affinity
+2026-10-19 14:24:24,769 - fade.tools.hpc_boltz2 - INFO - Running Boltz2 affinity prediction with job ID: boltz2aff_1792434264
+2026-10-19 14:24:26,956 - fade.tools.hpc_boltz2 - INFO - SLURM job submitted locally: 11230745
+2026-10-19 14:24:26,957 - fade.tools.hpc_boltz2 - INFO - Boltz2 affinity job submitted with SLURM ID: 11230745
+2026-10-19 14:24:26,957 - fade.tools.hpc_boltz2 - INFO - Waiting for Boltz2 affinity job boltz2aff_1792434264 (max 3600s)
+2026-10-19 14:28:27,365 - fade.tools.hpc_boltz2 - INFO - Boltz2 affinity result ready for job boltz2aff_1792434264 at /scratch/rajagopalmohanraj.n/F.A.D.E/boltz2_affinity_jobs/boltz2aff_1792434264/output/affinity_scores.json
+2026-10-19 14:28:27,423 - fade.tools.hpc_boltz2 - INFO - Saved affinity pose to /scratch/rajagopalmohanraj.n/F.A.D.E/backend/data/poses/boltz2_affinity_boltz2aff_1792434264.cif
+2026-10-19 14:28:27,423 - fade.nodes.screening - INFO - [Screener] diffsbdd_81107de4_5: pred_value=2.4013383388519287, P(binder)=0.24384254217147827
+2026-10-19 14:28:27,423 - fade.tools.hpc_boltz2 - INFO - Running Boltz2 affinity prediction with job ID: boltz2aff_1792434507
+2026-10-19 14:28:43,077 - fade.tools.hpc_boltz2 - INFO - SLURM job submitted locally: 11230837
+2026-10-19 14:28:43,078 - fade.tools.hpc_boltz2 - INFO - Boltz2 affinity job submitted with SLURM ID: 11230837
+2026-10-19 14:28:43,078 - fade.tools.hpc_boltz2 - INFO - Waiting for Boltz2 affinity job boltz2aff_1792434507 (max 3600s)
+2026-10-19 14:33:43,578 - fade.tools.hpc_boltz2 - INFO - Boltz2 affinity result ready for job boltz2aff_1792434507 at /scratch/rajagopalmohanraj.n/F.A.D.E/boltz2_affinity_jobs/boltz2aff_1792434507/output/boltz_results_input/predictions/input/affinity_input.json
+2026-10-19 14:33:43,662 - fade.tools.hpc_boltz2 - INFO - Saved affinity pose to /scratch/rajagopalmohanraj.n/F.A.D.E/backend/data/poses/boltz2_affinity_boltz2aff_1792434507.cif
+2026-10-19 14:33:43,662 - fade.nodes.screening - INFO - [Screener] diffsbdd_81107de4_3: pred_value=1.85355544090271, P(binder)=0.15690526366233826
+2026-10-19 14:33:43,662 - fade.nodes.screening - INFO - Screened 2 molecule(s) with Boltz-2 affinity (0 flagged as likely binders).
+Top candidate: diffsbdd_81107de4_3 (pred_value=1.85355544090271, P(binder)=0.15690526366233826)
+2026-10-19 14:33:43,665 - fade.nodes.analysis - INFO - [Analyzer] Analyzing 2 screening result(s)
+2026-10-19 14:33:43,791 - fade.nodes.analysis - INFO - [Analyzer] Wrote report to /scratch/rajagopalmohanraj.n/F.A.D.E/backend/output/reports/9afc1d47/final_report.md
+2026-10-19 14:33:44,027 - fade.workflow.drug_discovery - INFO - Pipeline completed for sp|P09455|RET1_HUMAN Cellular Retinol-binding protein 1 (CRBP1) GN=RBP1 (PDB-derived)
+- Structure: Boltz2 source
+- Selected pocket: pocket_1 (druggability: 0.93)
+- Generated 5 molecules
+- Filtered to 2 drug-like molecules
+
+================================================================================
+F.A.D.E DRUG DISCOVERY RESULTS
+================================================================================
+
+✓ Target Identified:
+  • Protein: sp|P09455|RET1_HUMAN Cellular Retinol-binding protein 1 (CRBP1) GN=RBP1
+  • UniProt ID: N/A
+  • Gene: N/A
+  • Sequence Length: 135 amino acids
+
+✓ Binding Pockets Detected: 1
+  • pocket_1:
+    Druggability: 0.93
+    Volume: 934.4 Ų
+
+✓ Selected Target Pocket: pocket_1
+  Rationale: Selected based on: Detected by fpocket; High druggability (0.93); High confidence (0.93); Optimal volume (934 Ų)
+2026-10-19 14:33:44,341 - fade.tools.ssh_client - INFO - SSH connection closed

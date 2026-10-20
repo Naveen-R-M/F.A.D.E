@@ -1,0 +1,213 @@
+No broken requirements found.
+........                                                                 [100%]
+=============================== warnings summary ===============================
+backend/fade/models/structured_outputs.py:74
+  /scratch/rajagopalmohanraj.n/F.A.D.E/backend/fade/models/structured_outputs.py:74: PydanticDeprecatedSince20: `min_items` is deprecated and will be removed, use `min_length` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.14/migration/
+    suggestions: List[str] = Field(
+
+backend/fade/models/structured_outputs.py:74
+  /scratch/rajagopalmohanraj.n/F.A.D.E/backend/fade/models/structured_outputs.py:74: PydanticDeprecatedSince20: `max_items` is deprecated and will be removed, use `max_length` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.14/migration/
+    suggestions: List[str] = Field(
+
+backend/fade/models/guidance.py:22
+  /scratch/rajagopalmohanraj.n/F.A.D.E/backend/fade/models/guidance.py:22: PydanticDeprecatedSince20: `min_items` is deprecated and will be removed, use `min_length` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.14/migration/
+    suggestions: List[str] = Field(
+
+backend/fade/models/guidance.py:22
+  /scratch/rajagopalmohanraj.n/F.A.D.E/backend/fade/models/guidance.py:22: PydanticDeprecatedSince20: `max_items` is deprecated and will be removed, use `max_length` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.14/migration/
+    suggestions: List[str] = Field(
+
+backend/fade/models/guidance.py:129
+  /scratch/rajagopalmohanraj.n/F.A.D.E/backend/fade/models/guidance.py:129: PydanticDeprecatedSince20: `max_items` is deprecated and will be removed, use `max_length` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.14/migration/
+    retry_queries: List[str] = Field(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+8 passed, 5 warnings in 11.01s
+2.3.0+cu118 2.1.2+pt23cu118 2.3.0
+2.5.1+cu121
+[10/20/26 12:54:13] INFO     Logging to                                         
+                             /scratch/rajagopalmohanraj.n/F.A.D.E/backend/logs/f
+                             ade_20261020_125413.log                            
+[10/20/26 12:54:15] INFO     Starting pipeline for query: Generate candidate    
+                             ligands for EGFR kinase domain, branch 2           
+                    INFO     Using simplified workflow: Query → RCSB →          
+                             Structure/Pockets → Molecules                      
+[10/20/26 12:54:16] INFO     [Entry Router] Query: Generate candidate ligands   
+                             for EGFR kinase domain, branch 2...                
+                    INFO     [Entry Router] Is continuation: False              
+                    INFO     [Entry Router] Routing to: structure_resolver      
+                    INFO     [Structure Resolver] Finding structure for P00533  
+                    INFO     Filtered 1 structures to 0 with drug-like ligands  
+                    WARNING  All structures filtered out. Common non-drug-like  
+                             ligands found:                                     
+                    WARNING    Ligands seen:                                    
+                    ERROR    No structures with drug-like ligands found         
+                    INFO     Try a more specific query like 'EGFR kinase domain 
+                             with inhibitor' or 'EGFR erlotinib'                
+                    WARNING  No structures with drug-like ligands, falling back 
+                             to best available                                  
+                    INFO     Structure 7SI1 scored 6.2                          
+                    INFO     Structure ranking results:                         
+                    INFO       1. 7SI1 - Score: 6.2                             
+                    INFO     Selected 7SI1 without drug-like ligands (score:    
+                             6.2)                                               
+                    INFO     Selected PDB structure: 7SI1 (score: 6.2)          
+                    INFO       No drug-like ligands found (Apo structure)       
+                    INFO       → Will proceed to FPocket for pocket detection   
+                    INFO     Using PDB structure: 7SI1 (resolution: 1.6 Å)      
+                    INFO     Saved structure to                                 
+                             /scratch/rajagopalmohanraj.n/F.A.D.E/backend/data/s
+                             tructures/7SI1.pdb                                 
+                    INFO     Apo or predicted structure found. Proceeding to    
+                             pocket mapping.                                    
+                    INFO     [Pocket Mapper] Detecting pockets in               
+                             /scratch/rajagopalmohanraj.n/F.A.D.E/backend/data/s
+                             tructures/7SI1.pdb                                 
+                    INFO     Detection strategy: Explicit fpocket-only selection
+                    INFO     Using tools: fpocket                               
+                    INFO     Generated new job_id: 95e415a3                     
+                    INFO     Running single-tool pocket detection (fpocket)...  
+                    ERROR    fpocket not found locally                          
+                    INFO     Using HPC fpocket                                  
+                    INFO     Running fpocket on HPC with job ID: 36906525       
+                    INFO     Creating remote directory:                         
+                             /scratch/rajagopalmohanraj.n/F.A.D.E/fpocket_inputs
+                             /36906525                                          
+[10/20/26 12:54:17] INFO     Uploading PDB to:                                  
+                             /scratch/rajagopalmohanraj.n/F.A.D.E/fpocket_inputs
+                             /36906525/7SI1.pdb                                 
+                    INFO     Running fpocket on HPC...                          
+[10/20/26 12:54:20] INFO     fpocket completed successfully                     
+                    INFO     Downloading fpocket info file...                   
+[10/20/26 12:54:38] INFO     Parsed 1 pockets with score >= 0.5                 
+                    INFO     SSH connection closed                              
+                    INFO     Updated job_id from fpocket: 36906525              
+                    INFO     Found 1 potential binding pockets                  
+                             Best pocket: pocket_11                             
+                               Druggability: 0.51                               
+                               Confidence: 0.51                                 
+                               Volume: 341.6 Ų                                  
+                    INFO     [Pocket Ranker] Ranking 1 pockets                  
+                    INFO     Selected pocket_11 as best pocket                  
+                    INFO     [Molecule Generator] Generating molecules for      
+                             pocket pocket_11                                   
+                    INFO     Using existing job_id from fpocket: 36906525       
+                    INFO     Requesting generation of 5 molecules               
+                    INFO     Running DiffSBDD on HPC with job ID: 36906525      
+                    INFO     Creating remote directories for job 36906525       
+[10/20/26 12:54:40] INFO     Uploading PDB to:                                  
+                             /scratch/rajagopalmohanraj.n/F.A.D.E/diffsbdd_input
+                             s/36906525/inputs/7SI1.pdb                         
+[10/20/26 12:54:41] INFO     Submitting DiffSBDD job to generate 5 molecules... 
+[10/20/26 12:54:45] INFO     SLURM job submitted with ID: 11262485              
+                    INFO     Waiting for DiffSBDD job to complete...            
+[10/20/26 12:54:56] INFO     Job 11262485 status: PENDING                       
+[10/20/26 12:55:37] INFO     Job 11262485 status: PENDING                       
+[10/20/26 12:56:20] INFO     Job 11262485 status: RUNNING                       
+[10/20/26 12:57:06] INFO     Job 11262485 status: RUNNING                       
+[10/20/26 12:57:41] INFO     Job 11262485 status: RUNNING                       
+[10/20/26 12:58:12] INFO     DiffSBDD output file found, job completed          
+                    INFO     Downloading generated molecules from               
+                             /scratch/rajagopalmohanraj.n/F.A.D.E/diffsbdd_input
+                             s/36906525/outputs/generated_ligands_36906525.sdf  
+                    INFO     Generated 5 molecules                              
+                    INFO     SSH connection closed                              
+                    INFO     Successfully generated 5 molecules                 
+                    INFO     [Medicinal Filter] Filtering 5 molecules           
+                    INFO     Limiting to top 2 molecules for screening          
+                    INFO     Filtered to 2 drug-like molecules                  
+                    INFO     [Screener] Screening 2 ligand(s) against target    
+                             (331 aa) with Boltz-2 affinity                     
+                    INFO     FADE_LOCAL_HPC set — Boltz2 HPC operations run     
+                             LOCALLY (no SSH)                                   
+                    INFO     Running Boltz2 affinity prediction with job ID:    
+                             boltz2aff_1792515492                               
+[10/20/26 12:58:17] INFO     SLURM job submitted locally: 11262651              
+                    INFO     Boltz2 affinity job submitted with SLURM ID:       
+                             11262651                                           
+                    INFO     Waiting for Boltz2 affinity job                    
+                             boltz2aff_1792515492 (max 3600s)                   
+[10/20/26 13:03:47] INFO     Boltz2 affinity result ready for job               
+                             boltz2aff_1792515492 at                            
+                             /scratch/rajagopalmohanraj.n/F.A.D.E/boltz2_affinit
+                             y_jobs/boltz2aff_1792515492/output/affinity_scores.
+                             json                                               
+                    INFO     Saved affinity pose to                             
+                             /scratch/rajagopalmohanraj.n/F.A.D.E/backend/data/p
+                             oses/boltz2_affinity_boltz2aff_1792515492.cif      
+                    INFO     [Screener] diffsbdd_36906525_3:                    
+                             pred_value=1.7002439498901367,                     
+                             P(binder)=0.06816829741001129                      
+                    INFO     Running Boltz2 affinity prediction with job ID:    
+                             boltz2aff_1792515827                               
+[10/20/26 13:03:58] INFO     SLURM job submitted locally: 11262818              
+                    INFO     Boltz2 affinity job submitted with SLURM ID:       
+                             11262818                                           
+                    INFO     Waiting for Boltz2 affinity job                    
+                             boltz2aff_1792515827 (max 3600s)                   
+[10/20/26 13:09:58] INFO     Boltz2 affinity result ready for job               
+                             boltz2aff_1792515827 at                            
+                             /scratch/rajagopalmohanraj.n/F.A.D.E/boltz2_affinit
+                             y_jobs/boltz2aff_1792515827/output/boltz_results_in
+                             put/predictions/input/affinity_input.json          
+                    INFO     Saved affinity pose to                             
+                             /scratch/rajagopalmohanraj.n/F.A.D.E/backend/data/p
+                             oses/boltz2_affinity_boltz2aff_1792515827.cif      
+                    INFO     [Screener] diffsbdd_36906525_1:                    
+                             pred_value=0.9474168419837952,                     
+                             P(binder)=0.12849543988704681                      
+                    INFO     Screened 2 molecule(s) with Boltz-2 affinity (0    
+                             flagged as likely binders).                        
+                             Top candidate: diffsbdd_36906525_1                 
+                             (pred_value=0.9474168419837952,                    
+                             P(binder)=0.12849543988704681)                     
+                    INFO     [Analyzer] Analyzing 2 screening result(s)         
+                    INFO     [Analyzer] Wrote report to                         
+                             /scratch/rajagopalmohanraj.n/F.A.D.E/backend/output
+                             /reports/bbe6aac4/final_report.md                  
+                    INFO     Pipeline completed for EGFR kinase domain (7SI1    
+                             chain A construct) (P00533)                        
+                             - Structure: PDB source (PDB: 7SI1)                
+                             - Selected pocket: pocket_11 (druggability: 0.51)  
+                             - Generated 5 molecules                            
+                             - Filtered to 2 drug-like molecules                
+EGFR BRANCH 2 COMPLETE bbe6aac4
+# F.A.D.E Drug Discovery Report: EGFR kinase domain (7SI1 chain A construct)
+
+*Generated: 2026-10-20 13:09:58*
+
+**Query:** Generate candidate ligands for EGFR kinase domain, branch 2
+
+## Pipeline Summary
+
+- **Target:** EGFR kinase domain (7SI1 chain A construct)
+- **Structure source:** PDB
+- **Selected pocket:** pocket_11 (druggability 0.51)
+- **Molecules screened:** 2
+- **Likely binders:** 0
+- **Screening method:** Boltz-2 binding-affinity prediction
+
+## Key Insights
+
+- Screened 2 candidate ligand(s) against EGFR kinase domain (7SI1 chain A construct) using Boltz-2 binding-affinity prediction.
+- 0 candidate(s) exceeded the binder-probability threshold (0.5).
+- Structure source for this run: PDB (branch determines how the pocket was found, screening is identical).
+- Top candidate diffsbdd_36906525_1 has predicted affinity value 0.947 (log10 IC50, lower is stronger) and P(binder)=0.128.
+
+## Top Candidates
+
+Ranked by Boltz-2 predicted affinity value (lower log10 IC50 = stronger); binder probability breaks ties.
+
+| Rank | Molecule | P(binder) | Affinity value (log10 IC50) | Pred. IC50 (µM) | QED |
+|------|----------|-----------|------------------------------|-----------------|-----|
+| 1 | diffsbdd_36906525_1 | 0.128 | 0.947 | 8.86 | 0.54 |
+| 2 | diffsbdd_36906525_3 | 0.068 | 1.700 | 50.1 | 0.73 |
+
+### Top candidate structures (SMILES)
+
+- **diffsbdd_36906525_1**: `BrNBr`
+- **diffsbdd_36906525_3**: `O=C(O)[C@H]1CCCC(=C2CC=C(C(F)(F)F)CC2)C1`
+
+---
+
+*Affinity values are Boltz-2 predictions (log10 IC50); the derived kcal/mol and IC50 columns are informational conversions and are assay-dependent. Use predicted affinity and binder probability for ranking, and validate top candidates experimentally.*

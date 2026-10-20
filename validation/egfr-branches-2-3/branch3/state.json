@@ -1,0 +1,32 @@
+{
+  "run_id": "3cabff54",
+  "job_id": null,
+  "timestamp": "2026-10-20 14:12:20.075471",
+  "user_id": null,
+  "query": "Generate candidate ligands for EGFR kinase domain, branch 3",
+  "messages": [
+    "content='Starting drug discovery for: Generate candidate ligands for EGFR kinase domain, branch 3' additional_kwargs={} response_metadata={} id='b0dc018d-9e27-46ca-9f1d-e36383ebf405'"
+  ],
+  "target_info": {
+    "protein_name": "EGFR kinase domain (7SI1 chain A construct)",
+    "gene_name": "EGFR",
+    "uniprot_id": "P00533",
+    "sequence": "GSGEAPNQALLRILKETEFKKIKVLGSGAFGTVYKGLWIPEGEKVKIPVAIKELREATSPKANKEILDEAYVMASVDNPHVCRLLGICLTSTVQLITQLMPFGCLLDYVREHKDNIGSQYLLNWCVQIAKGMNYLEDRRLVHRDLAARNVLVKTPQHVKITDFGLAKLLGAEEKEYHAEGGKVPIKWMALESILHRIYTHQSDVWSYGVTVWELMTFGSKPYDGIPASEISSILEKGERLPQPPICTIDVYMIMVKCWMIDADSRPKFRELIIEFSKMARDPQRYLVIQGDERMHLPSPTDSNFYRALMDEEDMDDVVDADEYLIPQQGNS",
+    "sequence_length": 331
+  },
+  "force_prediction": true,
+  "pocket_detection_mode": "fpocket",
+  "known_compounds": null,
+  "structure": null,
+  "structure_source": null,
+  "pockets": null,
+  "selected_pocket": null,
+  "generated_molecules": null,
+  "filtered_molecules": null,
+  "screening_results": null,
+  "analysis": null,
+  "final_report": null,
+  "current_step": "initialization",
+  "error": "No pockets found with druggability score >= 0.5",
+  "should_continue": false
+}

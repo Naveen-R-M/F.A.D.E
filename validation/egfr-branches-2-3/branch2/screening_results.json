@@ -1,0 +1,57 @@
+{
+  "target": "EGFR kinase domain (7SI1 chain A construct)",
+  "structure_source": "PDB",
+  "pocket_id": "pocket_11",
+  "generated_at": "2026-10-20T13:09:58.744325",
+  "screening_metadata": {
+    "method": "Boltz-2 affinity",
+    "n_candidates": 2,
+    "n_screened": 2,
+    "n_failed": 0,
+    "n_likely_binders": 0,
+    "skipped_no_smiles": 0,
+    "skipped_too_large": 0,
+    "binder_probability_threshold": 0.5,
+    "pocket_id": "pocket_11"
+  },
+  "results": [
+    {
+      "molecule_id": "diffsbdd_36906525_1",
+      "smiles": "BrNBr",
+      "binding_affinity": -6.892971482676552,
+      "affinity_confidence": 0.12849543988704681,
+      "pose_path": "/scratch/rajagopalmohanraj.n/F.A.D.E/backend/data/poses/boltz2_affinity_boltz2aff_1792515827.cif",
+      "interactions": null,
+      "rmsd_from_pocket": null,
+      "strain_energy": null,
+      "affinity_pred_value": 0.9474168419837952,
+      "affinity_probability_binary": 0.12849543988704681,
+      "predicted_ic50_uM": 8.859655641407645,
+      "likely_binder": false,
+      "pocket_id": "pocket_11",
+      "boltz2_job_id": "boltz2aff_1792515827",
+      "qed_score": 0.5447939734835131,
+      "mol_weight": 174.82299999999998,
+      "rank": 1
+    },
+    {
+      "molecule_id": "diffsbdd_36906525_3",
+      "smiles": "O=C(O)[C@H]1CCCC(=C2CC=C(C(F)(F)F)CC2)C1",
+      "binding_affinity": -5.865929349198493,
+      "affinity_confidence": 0.06816829741001129,
+      "pose_path": "/scratch/rajagopalmohanraj.n/F.A.D.E/backend/data/poses/boltz2_affinity_boltz2aff_1792515492.cif",
+      "interactions": null,
+      "rmsd_from_pocket": null,
+      "strain_energy": null,
+      "affinity_pred_value": 1.7002439498901367,
+      "affinity_probability_binary": 0.06816829741001129,
+      "predicted_ic50_uM": 50.14688372880434,
+      "likely_binder": false,
+      "pocket_id": "pocket_11",
+      "boltz2_job_id": "boltz2aff_1792515492",
+      "qed_score": 0.7263989949568752,
+      "mol_weight": 274.28200000000004,
+      "rank": 2
+    }
+  ]
+}

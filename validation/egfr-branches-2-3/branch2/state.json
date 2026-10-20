@@ -1,0 +1,381 @@
+{
+  "run_id": "bbe6aac4",
+  "timestamp": "2026-10-20 12:54:15.913409",
+  "query": "Generate candidate ligands for EGFR kinase domain, branch 2",
+  "messages": [
+    "content='Starting drug discovery for: Generate candidate ligands for EGFR kinase domain, branch 2' additional_kwargs={} response_metadata={} id='84b887fb-852a-4b60-93a4-a9c630d7f6cf'",
+    "content='Found experimental structure: PDB 7SI1 (1.6 \u00c5 resolution) - Apo structure' additional_kwargs={} response_metadata={} id='4e0f7f99-5fd9-4210-ad2b-0d6ceba3e53c'",
+    "content='Found 1 potential binding pockets\\nBest pocket: pocket_11\\n  Druggability: 0.51\\n  Confidence: 0.51\\n  Volume: 341.6 \u0172' additional_kwargs={} response_metadata={} id='32a2291f-c1c4-44d3-a8a1-90b4f84eb2fe'",
+    "content='Selected pocket: pocket_11\\nDruggability score: 0.51\\nConfidence: 0.51\\nVolume: 341.6 \u0172\\nFinal score: 40.35' additional_kwargs={} response_metadata={} id='9adddac2-58aa-4efd-8c87-ab7a3d41f4bf'",
+    "content='Generated 5 molecules using DiffSBDD\\nFirst molecule: BrNBr...' additional_kwargs={} response_metadata={} id='e60bddf6-fcc4-479d-8c1b-57d4ca752497'",
+    "content='Filtered 5 molecules\\n- Passed filters: 4\\n- No SMILES: 0\\n- Lipinski violations: 0\\n- Other violations: 1\\n- Selected for screening: 2' additional_kwargs={} response_metadata={} id='41aa3b6b-6e3e-41f4-9863-a8ec58000b80'",
+    "content='Screened 2 molecule(s) with Boltz-2 affinity (0 flagged as likely binders).\\nTop candidate: diffsbdd_36906525_1 (pred_value=0.9474168419837952, P(binder)=0.12849543988704681)' additional_kwargs={} response_metadata={} id='0305b96c-78f2-46db-977f-7229ecf4f50e'",
+    "content='Analysis complete. Top candidate: diffsbdd_36906525_1 (P(binder)=0.128). 0 likely binder(s) of 2 screened.\\nReport: /scratch/rajagopalmohanraj.n/F.A.D.E/backend/output/reports/bbe6aac4/final_report.md' additional_kwargs={} response_metadata={} id='d2558153-6bdf-4fe7-bbd8-c1f41a327066'"
+  ],
+  "should_continue": true,
+  "current_step": "analysis_completed",
+  "force_prediction": false,
+  "pocket_detection_mode": "fpocket",
+  "pocket_detection_metadata": {
+    "strategy": {
+      "use_consensus": false,
+      "tools": [
+        "fpocket"
+      ],
+      "min_agreement": 1,
+      "structure_source": "pdb",
+      "reason": "Explicit fpocket-only selection"
+    },
+    "consensus_used": false,
+    "tools_used": [
+      "fpocket"
+    ],
+    "total_pockets_found": 1
+  },
+  "pocket_selection_rationale": "Selected based on: Detected by fpocket; Moderate druggability (0.51); Optimal volume (342 \u0172)",
+  "generation_parameters": {
+    "method": "DiffSBDD",
+    "pocket_id": "pocket_11",
+    "pocket_residues": [
+      "A:837",
+      "A:855",
+      "A:857",
+      "A:858",
+      "A:875",
+      "A:876",
+      "A:877"
+    ],
+    "n_requested": 5,
+    "n_generated": 5,
+    "sanitized": true,
+    "job_id": "36906525"
+  },
+  "filter_statistics": {
+    "total": 5,
+    "no_smiles": 0,
+    "invalid_smiles": 0,
+    "lipinski_violations": 0,
+    "property_violations": 1,
+    "passed": 4
+  },
+  "screening_metadata": {
+    "method": "Boltz-2 affinity",
+    "n_candidates": 2,
+    "n_screened": 2,
+    "n_failed": 0,
+    "n_likely_binders": 0,
+    "skipped_no_smiles": 0,
+    "skipped_too_large": 0,
+    "binder_probability_threshold": 0.5,
+    "pocket_id": "pocket_11"
+  },
+  "job_id": "36906525",
+  "user_id": null,
+  "target_info": {
+    "protein_name": "EGFR kinase domain (7SI1 chain A construct)",
+    "gene_name": "EGFR",
+    "uniprot_id": "P00533",
+    "sequence": "GSGEAPNQALLRILKETEFKKIKVLGSGAFGTVYKGLWIPEGEKVKIPVAIKELREATSPKANKEILDEAYVMASVDNPHVCRLLGICLTSTVQLITQLMPFGCLLDYVREHKDNIGSQYLLNWCVQIAKGMNYLEDRRLVHRDLAARNVLVKTPQHVKITDFGLAKLLGAEEKEYHAEGGKVPIKWMALESILHRIYTHQSDVWSYGVTVWELMTFGSKPYDGIPASEISSILEKGERLPQPPICTIDVYMIMVKCWMIDADSRPKFRELIIEFSKMARDPQRYLVIQGDERMHLPSPTDSNFYRALMDEEDMDDVVDADEYLIPQQGNS",
+    "sequence_length": 331,
+    "existing_structures": [
+      {
+        "pdb_id": "7SI1",
+        "resolution": 1.6,
+        "title": "Crystal structure of apo EGFR kinase domain",
+        "has_drug_like_ligand": false,
+        "ligands": [],
+        "drug_like_ligands": [],
+        "quality_score": 6.25
+      }
+    ]
+  },
+  "known_compounds": null,
+  "structure": {
+    "structure_path": "/scratch/rajagopalmohanraj.n/F.A.D.E/backend/data/structures/7SI1.pdb",
+    "pdb_id": "7SI1",
+    "resolution": 1.6,
+    "source": "PDB",
+    "confidence_score": null,
+    "has_drug_like_ligand": false,
+    "has_ligand": false,
+    "ligand_names": [],
+    "drug_like_ligands": []
+  },
+  "structure_source": "PDB",
+  "pockets": [
+    {
+      "pocket_id": "pocket_11",
+      "center": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "residues": [
+        "A:837",
+        "A:855",
+        "A:857",
+        "A:858",
+        "A:875",
+        "A:876",
+        "A:877"
+      ],
+      "volume": 341.569,
+      "druggability_score": 0.507,
+      "confidence_score": 0.507,
+      "agreement_level": 1,
+      "source_tools": [
+        "fpocket"
+      ],
+      "is_consensus": false,
+      "pocket_file": "/scratch/rajagopalmohanraj.n/F.A.D.E/backend/data/pockets/bbe6aac4/pocket_11.txt",
+      "final_score": 40.35
+    }
+  ],
+  "selected_pocket": {
+    "pocket_id": "pocket_11",
+    "center": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "residues": [
+      "A:837",
+      "A:855",
+      "A:857",
+      "A:858",
+      "A:875",
+      "A:876",
+      "A:877"
+    ],
+    "volume": 341.569,
+    "druggability_score": 0.507,
+    "confidence_score": 0.507,
+    "agreement_level": 1,
+    "source_tools": [
+      "fpocket"
+    ],
+    "is_consensus": false,
+    "pocket_file": "/scratch/rajagopalmohanraj.n/F.A.D.E/backend/data/pockets/bbe6aac4/pocket_11.txt",
+    "final_score": 40.35
+  },
+  "generated_molecules": [
+    {
+      "molecule_number": 1,
+      "smiles": "BrNBr",
+      "sdf_block": "\n     RDKit          3D\n\n  3  2  0  0  0  0  0  0  0  0999 V2000\n   51.0640   13.4710  -29.8170 Br  0  0  0  0  0  0  0  0  0  0  0  0\n   50.9440   13.7610  -29.5600 N   0  0  0  0  0  0  0  0  0  0  0  0\n   50.5410   13.8280  -29.5030 Br  0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0\n  2  3  1  0\nM  END\n$$$$\n",
+      "molecule_id": "diffsbdd_36906525_1",
+      "generation_method": "DiffSBDD",
+      "source_file": "/scratch/rajagopalmohanraj.n/F.A.D.E/backend/data/molecules/diffsbdd_36906525.sdf",
+      "job_id": "36906525",
+      "needs_property_calculation": true,
+      "passed_generation": true
+    },
+    {
+      "molecule_number": 2,
+      "smiles": "OOOBr",
+      "sdf_block": "\n     RDKit          3D\n\n  4  3  0  0  0  0  0  0  0  0999 V2000\n   50.2710   14.0050  -31.8890 Br  0  0  0  0  0  0  0  0  0  0  0  0\n   50.1570   14.2070  -31.5620 O   0  0  0  0  0  0  0  0  0  0  0  0\n   50.4890   14.0730  -31.3710 O   0  0  0  0  0  0  0  0  0  0  0  0\n   50.7080   13.7770  -31.5420 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0\n  2  3  1  0\n  4  3  1  0\nM  END\n$$$$\n",
+      "molecule_id": "diffsbdd_36906525_2",
+      "generation_method": "DiffSBDD",
+      "source_file": "/scratch/rajagopalmohanraj.n/F.A.D.E/backend/data/molecules/diffsbdd_36906525.sdf",
+      "job_id": "36906525",
+      "needs_property_calculation": true,
+      "passed_generation": true
+    },
+    {
+      "molecule_number": 3,
+      "smiles": "O=C(O)[C@H]1CCCC(=C2CC=C(C(F)(F)F)CC2)C1",
+      "sdf_block": "\n     RDKit          3D\n\n 19 20  0  0  0  0  0  0  0  0999 V2000\n   46.7660   10.8820  -34.7380 C   0  0  0  0  0  0  0  0  0  0  0  0\n   45.4550   13.4670  -30.5400 C   0  0  0  0  0  0  0  0  0  0  0  0\n   45.7040   13.9960  -29.2590 C   0  0  0  0  0  0  0  0  0  0  0  0\n   46.3150   13.5190  -27.0410 C   0  0  0  0  0  0  0  0  0  0  0  0\n   45.3070   12.4070  -33.3250 C   0  0  0  0  0  0  0  0  0  0  0  0\n   45.2880   13.4260  -26.2740 F   0  0  0  0  0  0  0  0  0  0  0  0\n   43.9340   12.9250  -35.7940 O   0  0  0  0  0  0  0  0  0  0  0  0\n   46.9200   14.6240  -26.7680 F   0  0  0  0  0  0  0  0  0  0  0  0\n   45.5970   11.5910  -32.2240 C   0  0  0  0  0  0  0  0  0  0  0  0\n   46.1030    9.7580  -33.8710 C   0  0  0  0  0  0  0  0  0  0  0  0\n   46.8620   11.8770  -28.7190 C   0  0  0  0  0  0  0  0  0  0  0  0\n   45.4510   11.9030  -36.8100 O   0  0  0  0  0  0  0  0  0  0  0  0\n   44.9990   12.2240  -35.7850 C   0  0  0  0  0  0  0  0  0  0  0  0\n   45.6500   10.0970  -32.4230 C   0  0  0  0  0  0  0  0  0  0  0  0\n   46.2820   13.0970  -28.3430 C   0  0  0  0  0  0  0  0  0  0  0  0\n   46.2020   11.3520  -29.9020 C   0  0  0  0  0  0  0  0  0  0  0  0\n   45.7950   12.1240  -30.9280 C   0  0  0  0  0  0  0  0  0  0  0  0\n   45.5920   11.9040  -34.5580 C   0  0  1  0  0  0  0  0  0  0  0  0\n   47.2920   12.6210  -26.4340 F   0  0  0  0  0  0  0  0  0  0  0  0\n  1 18  1  0\n  1 10  1  0\n  2  3  1  0\n  3 15  2  0\n  4  8  1  0\n  4 19  1  0\n  4  6  1  0\n  5  9  1  0\n  7 13  1  0\n  9 17  2  3\n 10 14  1  0\n 11 15  1  0\n 12 13  2  0\n 14  9  1  0\n 15  4  1  0\n 16 11  1  0\n 17  2  1  0\n 17 16  1  0\n 18 13  1  6\n 18  5  1  0\nM  END\n$$$$\n",
+      "molecule_id": "diffsbdd_36906525_3",
+      "generation_method": "DiffSBDD",
+      "source_file": "/scratch/rajagopalmohanraj.n/F.A.D.E/backend/data/molecules/diffsbdd_36906525.sdf",
+      "job_id": "36906525",
+      "needs_property_calculation": true,
+      "passed_generation": true
+    },
+    {
+      "molecule_number": 4,
+      "smiles": "BrOOOOOBr",
+      "sdf_block": "\n     RDKit          3D\n\n  7  6  0  0  0  0  0  0  0  0999 V2000\n   49.4040   14.7960  -30.2050 O   0  0  0  0  0  0  0  0  0  0  0  0\n   48.4010   13.2590  -31.1400 O   0  0  0  0  0  0  0  0  0  0  0  0\n   50.1130   13.2630  -30.5450 O   0  0  0  0  0  0  0  0  0  0  0  0\n   49.8000   14.7180  -30.0440 Br  0  0  0  0  0  0  0  0  0  0  0  0\n   48.9000   13.3020  -30.8190 O   0  0  0  0  0  0  0  0  0  0  0  0\n   49.5300   14.3520  -30.3430 O   0  0  0  0  0  0  0  0  0  0  0  0\n   48.5140   14.0800  -31.9910 Br  0  0  0  0  0  0  0  0  0  0  0  0\n  1  4  1  0\n  2  5  1  0\n  3  6  1  0\n  5  3  1  0\n  6  1  1  0\n  7  2  1  0\nM  END\n$$$$\n",
+      "molecule_id": "diffsbdd_36906525_4",
+      "generation_method": "DiffSBDD",
+      "source_file": "/scratch/rajagopalmohanraj.n/F.A.D.E/backend/data/molecules/diffsbdd_36906525.sdf",
+      "job_id": "36906525",
+      "needs_property_calculation": true,
+      "passed_generation": true
+    },
+    {
+      "molecule_number": 5,
+      "smiles": "BrOOBr",
+      "sdf_block": "\n     RDKit          3D\n\n  4  3  0  0  0  0  0  0  0  0999 V2000\n   51.2660   11.2230  -32.3420 O   0  0  0  0  0  0  0  0  0  0  0  0\n   51.1710   11.6030  -32.3890 Br  0  0  0  0  0  0  0  0  0  0  0  0\n   50.8840   11.3190  -32.4150 O   0  0  0  0  0  0  0  0  0  0  0  0\n   51.3600   11.4260  -32.0100 Br  0  0  0  0  0  0  0  0  0  0  0  0\n  1  4  1  0\n  3  2  1  0\n  3  1  1  0\nM  END\n$$$$\n",
+      "molecule_id": "diffsbdd_36906525_5",
+      "generation_method": "DiffSBDD",
+      "source_file": "/scratch/rajagopalmohanraj.n/F.A.D.E/backend/data/molecules/diffsbdd_36906525.sdf",
+      "job_id": "36906525",
+      "needs_property_calculation": true,
+      "passed_generation": true
+    }
+  ],
+  "filtered_molecules": [
+    {
+      "molecule_number": 3,
+      "smiles": "O=C(O)[C@H]1CCCC(=C2CC=C(C(F)(F)F)CC2)C1",
+      "sdf_block": "\n     RDKit          3D\n\n 19 20  0  0  0  0  0  0  0  0999 V2000\n   46.7660   10.8820  -34.7380 C   0  0  0  0  0  0  0  0  0  0  0  0\n   45.4550   13.4670  -30.5400 C   0  0  0  0  0  0  0  0  0  0  0  0\n   45.7040   13.9960  -29.2590 C   0  0  0  0  0  0  0  0  0  0  0  0\n   46.3150   13.5190  -27.0410 C   0  0  0  0  0  0  0  0  0  0  0  0\n   45.3070   12.4070  -33.3250 C   0  0  0  0  0  0  0  0  0  0  0  0\n   45.2880   13.4260  -26.2740 F   0  0  0  0  0  0  0  0  0  0  0  0\n   43.9340   12.9250  -35.7940 O   0  0  0  0  0  0  0  0  0  0  0  0\n   46.9200   14.6240  -26.7680 F   0  0  0  0  0  0  0  0  0  0  0  0\n   45.5970   11.5910  -32.2240 C   0  0  0  0  0  0  0  0  0  0  0  0\n   46.1030    9.7580  -33.8710 C   0  0  0  0  0  0  0  0  0  0  0  0\n   46.8620   11.8770  -28.7190 C   0  0  0  0  0  0  0  0  0  0  0  0\n   45.4510   11.9030  -36.8100 O   0  0  0  0  0  0  0  0  0  0  0  0\n   44.9990   12.2240  -35.7850 C   0  0  0  0  0  0  0  0  0  0  0  0\n   45.6500   10.0970  -32.4230 C   0  0  0  0  0  0  0  0  0  0  0  0\n   46.2820   13.0970  -28.3430 C   0  0  0  0  0  0  0  0  0  0  0  0\n   46.2020   11.3520  -29.9020 C   0  0  0  0  0  0  0  0  0  0  0  0\n   45.7950   12.1240  -30.9280 C   0  0  0  0  0  0  0  0  0  0  0  0\n   45.5920   11.9040  -34.5580 C   0  0  1  0  0  0  0  0  0  0  0  0\n   47.2920   12.6210  -26.4340 F   0  0  0  0  0  0  0  0  0  0  0  0\n  1 18  1  0\n  1 10  1  0\n  2  3  1  0\n  3 15  2  0\n  4  8  1  0\n  4 19  1  0\n  4  6  1  0\n  5  9  1  0\n  7 13  1  0\n  9 17  2  3\n 10 14  1  0\n 11 15  1  0\n 12 13  2  0\n 14  9  1  0\n 15  4  1  0\n 16 11  1  0\n 17  2  1  0\n 17 16  1  0\n 18 13  1  6\n 18  5  1  0\nM  END\n$$$$\n",
+      "molecule_id": "diffsbdd_36906525_3",
+      "generation_method": "DiffSBDD",
+      "source_file": "/scratch/rajagopalmohanraj.n/F.A.D.E/backend/data/molecules/diffsbdd_36906525.sdf",
+      "job_id": "36906525",
+      "needs_property_calculation": true,
+      "passed_generation": true,
+      "mol_weight": 274.28200000000004,
+      "logp": 4.230400000000003,
+      "hba": 1,
+      "hbd": 1,
+      "lipinski_violations": 0,
+      "qed_score": 0.7263989949568752,
+      "sa_score": null,
+      "has_pains_alert": false,
+      "passed_filters": true,
+      "filter_warnings": []
+    },
+    {
+      "molecule_number": 1,
+      "smiles": "BrNBr",
+      "sdf_block": "\n     RDKit          3D\n\n  3  2  0  0  0  0  0  0  0  0999 V2000\n   51.0640   13.4710  -29.8170 Br  0  0  0  0  0  0  0  0  0  0  0  0\n   50.9440   13.7610  -29.5600 N   0  0  0  0  0  0  0  0  0  0  0  0\n   50.5410   13.8280  -29.5030 Br  0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0\n  2  3  1  0\nM  END\n$$$$\n",
+      "molecule_id": "diffsbdd_36906525_1",
+      "generation_method": "DiffSBDD",
+      "source_file": "/scratch/rajagopalmohanraj.n/F.A.D.E/backend/data/molecules/diffsbdd_36906525.sdf",
+      "job_id": "36906525",
+      "needs_property_calculation": true,
+      "passed_generation": true,
+      "mol_weight": 174.82299999999998,
+      "logp": 1.1958,
+      "hba": 1,
+      "hbd": 1,
+      "lipinski_violations": 0,
+      "qed_score": 0.5447939734835131,
+      "sa_score": null,
+      "has_pains_alert": false,
+      "passed_filters": true,
+      "filter_warnings": []
+    }
+  ],
+  "screening_results": [
+    {
+      "molecule_id": "diffsbdd_36906525_1",
+      "smiles": "BrNBr",
+      "binding_affinity": -6.892971482676552,
+      "affinity_confidence": 0.12849543988704681,
+      "pose_path": "/scratch/rajagopalmohanraj.n/F.A.D.E/backend/data/poses/boltz2_affinity_boltz2aff_1792515827.cif",
+      "interactions": null,
+      "rmsd_from_pocket": null,
+      "strain_energy": null,
+      "affinity_pred_value": 0.9474168419837952,
+      "affinity_probability_binary": 0.12849543988704681,
+      "predicted_ic50_uM": 8.859655641407645,
+      "likely_binder": false,
+      "pocket_id": "pocket_11",
+      "boltz2_job_id": "boltz2aff_1792515827",
+      "qed_score": 0.5447939734835131,
+      "mol_weight": 174.82299999999998,
+      "rank": 1
+    },
+    {
+      "molecule_id": "diffsbdd_36906525_3",
+      "smiles": "O=C(O)[C@H]1CCCC(=C2CC=C(C(F)(F)F)CC2)C1",
+      "binding_affinity": -5.865929349198493,
+      "affinity_confidence": 0.06816829741001129,
+      "pose_path": "/scratch/rajagopalmohanraj.n/F.A.D.E/backend/data/poses/boltz2_affinity_boltz2aff_1792515492.cif",
+      "interactions": null,
+      "rmsd_from_pocket": null,
+      "strain_energy": null,
+      "affinity_pred_value": 1.7002439498901367,
+      "affinity_probability_binary": 0.06816829741001129,
+      "predicted_ic50_uM": 50.14688372880434,
+      "likely_binder": false,
+      "pocket_id": "pocket_11",
+      "boltz2_job_id": "boltz2aff_1792515492",
+      "qed_score": 0.7263989949568752,
+      "mol_weight": 274.28200000000004,
+      "rank": 2
+    }
+  ],
+  "analysis": {
+    "top_molecule": {
+      "molecule_id": "diffsbdd_36906525_1",
+      "smiles": "BrNBr",
+      "binding_affinity": -6.892971482676552,
+      "affinity_confidence": 0.12849543988704681,
+      "pose_path": "/scratch/rajagopalmohanraj.n/F.A.D.E/backend/data/poses/boltz2_affinity_boltz2aff_1792515827.cif",
+      "interactions": null,
+      "rmsd_from_pocket": null,
+      "strain_energy": null,
+      "affinity_pred_value": 0.9474168419837952,
+      "affinity_probability_binary": 0.12849543988704681,
+      "predicted_ic50_uM": 8.859655641407645,
+      "likely_binder": false,
+      "pocket_id": "pocket_11",
+      "boltz2_job_id": "boltz2aff_1792515827",
+      "qed_score": 0.5447939734835131,
+      "mol_weight": 174.82299999999998,
+      "rank": 1
+    },
+    "top_10_molecules": [
+      {
+        "molecule_id": "diffsbdd_36906525_1",
+        "smiles": "BrNBr",
+        "binding_affinity": -6.892971482676552,
+        "affinity_confidence": 0.12849543988704681,
+        "pose_path": "/scratch/rajagopalmohanraj.n/F.A.D.E/backend/data/poses/boltz2_affinity_boltz2aff_1792515827.cif",
+        "interactions": null,
+        "rmsd_from_pocket": null,
+        "strain_energy": null,
+        "affinity_pred_value": 0.9474168419837952,
+        "affinity_probability_binary": 0.12849543988704681,
+        "predicted_ic50_uM": 8.859655641407645,
+        "likely_binder": false,
+        "pocket_id": "pocket_11",
+        "boltz2_job_id": "boltz2aff_1792515827",
+        "qed_score": 0.5447939734835131,
+        "mol_weight": 174.82299999999998,
+        "rank": 1
+      },
+      {
+        "molecule_id": "diffsbdd_36906525_3",
+        "smiles": "O=C(O)[C@H]1CCCC(=C2CC=C(C(F)(F)F)CC2)C1",
+        "binding_affinity": -5.865929349198493,
+        "affinity_confidence": 0.06816829741001129,
+        "pose_path": "/scratch/rajagopalmohanraj.n/F.A.D.E/backend/data/poses/boltz2_affinity_boltz2aff_1792515492.cif",
+        "interactions": null,
+        "rmsd_from_pocket": null,
+        "strain_energy": null,
+        "affinity_pred_value": 1.7002439498901367,
+        "affinity_probability_binary": 0.06816829741001129,
+        "predicted_ic50_uM": 50.14688372880434,
+        "likely_binder": false,
+        "pocket_id": "pocket_11",
+        "boltz2_job_id": "boltz2aff_1792515492",
+        "qed_score": 0.7263989949568752,
+        "mol_weight": 274.28200000000004,
+        "rank": 2
+      }
+    ],
+    "novel_scaffolds": [
+      "BrNBr",
+      "O=C(O)[C@H]1CCCC(=C2CC=C(C(F)(F)F)CC2)C1"
+    ],
+    "key_insights": [
+      "Screened 2 candidate ligand(s) against EGFR kinase domain (7SI1 chain A construct) using Boltz-2 binding-affinity prediction.",
+      "0 candidate(s) exceeded the binder-probability threshold (0.5).",
+      "Structure source for this run: PDB (branch determines how the pocket was found, screening is identical).",
+      "Top candidate diffsbdd_36906525_1 has predicted affinity value 0.947 (log10 IC50, lower is stronger) and P(binder)=0.128."
+    ],
+    "comparison_with_known": {},
+    "synthesis_feasibility": {},
+    "n_screened": 2,
+    "n_likely_binders": 0,
+    "report_path": "/scratch/rajagopalmohanraj.n/F.A.D.E/backend/output/reports/bbe6aac4/final_report.md"
+  },
+  "final_report": "# F.A.D.E Drug Discovery Report: EGFR kinase domain (7SI1 chain A construct)\n\n*Generated: 2026-10-20 13:09:58*\n\n**Query:** Generate candidate ligands for EGFR kinase domain, branch 2\n\n## Pipeline Summary\n\n- **Target:** EGFR kinase domain (7SI1 chain A construct)\n- **Structure source:** PDB\n- **Selected pocket:** pocket_11 (druggability 0.51)\n- **Molecules screened:** 2\n- **Likely binders:** 0\n- **Screening method:** Boltz-2 binding-affinity prediction\n\n## Key Insights\n\n- Screened 2 candidate ligand(s) against EGFR kinase domain (7SI1 chain A construct) using Boltz-2 binding-affinity prediction.\n- 0 candidate(s) exceeded the binder-probability threshold (0.5).\n- Structure source for this run: PDB (branch determines how the pocket was found, screening is identical).\n- Top candidate diffsbdd_36906525_1 has predicted affinity value 0.947 (log10 IC50, lower is stronger) and P(binder)=0.128.\n\n## Top Candidates\n\nRanked by Boltz-2 predicted affinity value (lower log10 IC50 = stronger); binder probability breaks ties.\n\n| Rank | Molecule | P(binder) | Affinity value (log10 IC50) | Pred. IC50 (\u00b5M) | QED |\n|------|----------|-----------|------------------------------|-----------------|-----|\n| 1 | diffsbdd_36906525_1 | 0.128 | 0.947 | 8.86 | 0.54 |\n| 2 | diffsbdd_36906525_3 | 0.068 | 1.700 | 50.1 | 0.73 |\n\n### Top candidate structures (SMILES)\n\n- **diffsbdd_36906525_1**: `BrNBr`\n- **diffsbdd_36906525_3**: `O=C(O)[C@H]1CCCC(=C2CC=C(C(F)(F)F)CC2)C1`\n\n---\n\n*Affinity values are Boltz-2 predictions (log10 IC50); the derived kcal/mol and IC50 columns are informational conversions and are assay-dependent. Use predicted affinity and binder probability for ranking, and validate top candidates experimentally.*",
+  "error": null,
+  "routing_decision": "structure_resolver"
+}

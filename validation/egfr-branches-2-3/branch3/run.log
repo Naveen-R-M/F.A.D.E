@@ -1,0 +1,94 @@
+No broken requirements found.
+........                                                                 [100%]
+=============================== warnings summary ===============================
+backend/fade/models/structured_outputs.py:74
+  /scratch/rajagopalmohanraj.n/F.A.D.E/backend/fade/models/structured_outputs.py:74: PydanticDeprecatedSince20: `min_items` is deprecated and will be removed, use `min_length` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.14/migration/
+    suggestions: List[str] = Field(
+
+backend/fade/models/structured_outputs.py:74
+  /scratch/rajagopalmohanraj.n/F.A.D.E/backend/fade/models/structured_outputs.py:74: PydanticDeprecatedSince20: `max_items` is deprecated and will be removed, use `max_length` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.14/migration/
+    suggestions: List[str] = Field(
+
+backend/fade/models/guidance.py:22
+  /scratch/rajagopalmohanraj.n/F.A.D.E/backend/fade/models/guidance.py:22: PydanticDeprecatedSince20: `min_items` is deprecated and will be removed, use `min_length` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.14/migration/
+    suggestions: List[str] = Field(
+
+backend/fade/models/guidance.py:22
+  /scratch/rajagopalmohanraj.n/F.A.D.E/backend/fade/models/guidance.py:22: PydanticDeprecatedSince20: `max_items` is deprecated and will be removed, use `max_length` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.14/migration/
+    suggestions: List[str] = Field(
+
+backend/fade/models/guidance.py:129
+  /scratch/rajagopalmohanraj.n/F.A.D.E/backend/fade/models/guidance.py:129: PydanticDeprecatedSince20: `max_items` is deprecated and will be removed, use `max_length` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.14/migration/
+    retry_queries: List[str] = Field(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+8 passed, 5 warnings in 57.28s
+2.3.0+cu118 2.1.2+pt23cu118 2.3.0
+2.5.1+cu121
+[10/20/26 14:12:14] INFO     Logging to                                         
+                             /scratch/rajagopalmohanraj.n/F.A.D.E/backend/logs/f
+                             ade_20261020_141214.log                            
+[10/20/26 14:12:20] INFO     Starting pipeline for query: Generate candidate    
+                             ligands for EGFR kinase domain, branch 3           
+                    INFO     Using simplified workflow: Query → RCSB →          
+                             Structure/Pockets → Molecules                      
+[10/20/26 14:12:21] INFO     [Entry Router] Query: Generate candidate ligands   
+                             for EGFR kinase domain, branch 3...                
+                    INFO     [Entry Router] Is continuation: False              
+                    INFO     [Entry Router] Routing to: structure_resolver      
+                    INFO     [Structure Resolver] Finding structure for P00533  
+                    INFO     No PDB structures available, checking AlphaFold    
+                             database                                           
+                    INFO     No existing structure found, using Boltz-2 for     
+                             prediction                                         
+                    INFO     FADE_LOCAL_HPC set — Boltz2 HPC operations run     
+                             LOCALLY (no SSH)                                   
+                    INFO     Running Boltz2 prediction with job ID:             
+                             boltz2_1792519941                                  
+[10/20/26 14:12:26] INFO     SLURM job submitted locally: 11264182              
+                    INFO     Boltz2 job submitted with SLURM ID: 11264182       
+                    INFO     Boltz-2 job submitted: boltz2_1792519941           
+                    INFO     Structure source is Boltz2 and status is pending,  
+                             moving to 'wait' state.                            
+                    INFO     [Structure Wait] Waiting for Boltz-2 job:          
+                             boltz2_1792519941                                  
+                    INFO     Waiting for Boltz2 job boltz2_1792519941 (max      
+                             3600s)                                             
+[10/20/26 14:15:56] INFO     Boltz2 structure ready for job boltz2_1792519941 at
+                             /scratch/rajagopalmohanraj.n/F.A.D.E/boltz2_jobs/bo
+                             ltz2_1792519941/output/predicted_structure.cif     
+                    INFO     Downloaded confidence scores from                  
+                             /scratch/rajagopalmohanraj.n/F.A.D.E/boltz2_jobs/bo
+                             ltz2_1792519941/output/confidence_scores.json      
+[10/20/26 14:15:57] INFO     Saved structure to                                 
+                             /scratch/rajagopalmohanraj.n/F.A.D.E/backend/data/s
+                             tructures/boltz2_EGFR_boltz2_1792519941.pdb        
+                    INFO     [Pocket Mapper] Detecting pockets in               
+                             /scratch/rajagopalmohanraj.n/F.A.D.E/backend/data/s
+                             tructures/boltz2_EGFR_boltz2_1792519941.pdb        
+                    INFO     Detection strategy: Explicit fpocket-only selection
+                    INFO     Using tools: fpocket                               
+                    INFO     Generated new job_id: 3d1351e5                     
+                    INFO     Running single-tool pocket detection (fpocket)...  
+                    ERROR    fpocket not found locally                          
+                    INFO     Using HPC fpocket                                  
+                    INFO     Running fpocket on HPC with job ID: 53ed3c6b       
+                    INFO     Creating remote directory:                         
+                             /scratch/rajagopalmohanraj.n/F.A.D.E/fpocket_inputs
+                             /53ed3c6b                                          
+[10/20/26 14:16:00] INFO     Uploading PDB to:                                  
+                             /scratch/rajagopalmohanraj.n/F.A.D.E/fpocket_inputs
+                             /53ed3c6b/boltz2_EGFR_boltz2_1792519941.pdb        
+                    INFO     Running fpocket on HPC...                          
+[10/20/26 14:16:11] INFO     fpocket completed successfully                     
+                    INFO     Downloading fpocket info file...                   
+[10/20/26 14:16:58] INFO     Parsed 0 pockets with score >= 0.5                 
+                    ERROR    Error running fpocket on HPC: No pockets found with
+                             druggability score >= 0.5                          
+                    INFO     SSH connection closed                              
+[10/20/26 14:16:59] ERROR    Pipeline failed: No pockets found with druggability
+                             score >= 0.5                                       
+Traceback (most recent call last):
+  File "/scratch/rajagopalmohanraj.n/fade-egfr-validation/run.py", line 32, in <module>
+    assert not state.get('error'), state.get('error')
+AssertionError: No pockets found with druggability score >= 0.5

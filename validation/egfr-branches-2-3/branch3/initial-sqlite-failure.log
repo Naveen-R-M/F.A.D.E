@@ -1,0 +1,39 @@
+No broken requirements found.
+........                                                                 [100%]
+=============================== warnings summary ===============================
+backend/fade/models/structured_outputs.py:74
+  /scratch/rajagopalmohanraj.n/F.A.D.E/backend/fade/models/structured_outputs.py:74: PydanticDeprecatedSince20: `min_items` is deprecated and will be removed, use `min_length` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.14/migration/
+    suggestions: List[str] = Field(
+
+backend/fade/models/structured_outputs.py:74
+  /scratch/rajagopalmohanraj.n/F.A.D.E/backend/fade/models/structured_outputs.py:74: PydanticDeprecatedSince20: `max_items` is deprecated and will be removed, use `max_length` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.14/migration/
+    suggestions: List[str] = Field(
+
+backend/fade/models/guidance.py:22
+  /scratch/rajagopalmohanraj.n/F.A.D.E/backend/fade/models/guidance.py:22: PydanticDeprecatedSince20: `min_items` is deprecated and will be removed, use `min_length` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.14/migration/
+    suggestions: List[str] = Field(
+
+backend/fade/models/guidance.py:22
+  /scratch/rajagopalmohanraj.n/F.A.D.E/backend/fade/models/guidance.py:22: PydanticDeprecatedSince20: `max_items` is deprecated and will be removed, use `max_length` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.14/migration/
+    suggestions: List[str] = Field(
+
+backend/fade/models/guidance.py:129
+  /scratch/rajagopalmohanraj.n/F.A.D.E/backend/fade/models/guidance.py:129: PydanticDeprecatedSince20: `max_items` is deprecated and will be removed, use `max_length` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.14/migration/
+    retry_queries: List[str] = Field(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+8 passed, 5 warnings in 15.10s
+2.3.0+cu118 2.1.2+pt23cu118 2.3.0
+2.5.1+cu121
+[10/20/26 12:54:35] INFO     Logging to                                         
+                             /scratch/rajagopalmohanraj.n/F.A.D.E/backend/logs/f
+                             ade_20261020_125435.log                            
+[10/20/26 12:54:37] INFO     Starting pipeline for query: Generate candidate    
+                             ligands for EGFR kinase domain, branch 3           
+                    INFO     Using simplified workflow: Query → RCSB →          
+                             Structure/Pockets → Molecules                      
+[10/20/26 12:54:48] ERROR    Pipeline failed: locking protocol                  
+Traceback (most recent call last):
+  File "/scratch/rajagopalmohanraj.n/fade-egfr-validation/run.py", line 32, in <module>
+    assert not state.get('error'), state.get('error')
+AssertionError: locking protocol

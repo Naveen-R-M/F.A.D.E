@@ -1,0 +1,35 @@
+HEADER
+HEADER This is a pdb format file writen by the programm fpocket.                 
+HEADER It represents the atoms contacted by the voronoi vertices of the pocket.  
+HEADER                                                                           
+HEADER Information about the pocket    13:
+HEADER 0  - Pocket Score                      : -0.1010
+HEADER 1  - Drug Score                        : 0.0001
+HEADER 2  - Number of alpha spheres           :    15
+HEADER 3  - Mean alpha-sphere radius          : 4.1251
+HEADER 4  - Mean alpha-sphere Solvent Acc.    : 0.8164
+HEADER 5  - Mean B-factor of pocket residues  : 0.6231
+HEADER 6  - Hydrophobicity Score              : -11.6000
+HEADER 7  - Polarity Score                    :     4
+HEADER 8  - Amino Acid based volume Score     : 4.6000
+HEADER 9  - Pocket volume (Monte Carlo)       : 192.8827
+HEADER 10 - Pocket volume (convex hull)       : 1.2073
+HEADER 11 - Charge Score                      :     0
+HEADER 12 - Local hydrophobic density Score   : 1.0000
+HEADER 13 - Number of apolar alpha sphere     :     2
+HEADER 14 - Proportion of apolar alpha sphere : 0.1333
+ATOM   1344  OE1 GLU A 865      71.151  16.501 -48.378  0.00  0.00           O 0
+ATOM   1338   CA GLU A 865      68.195  15.182 -46.371  0.00  0.00           C 0
+ATOM   1345  OE2 GLU A 865      71.825  14.691 -47.357  0.69  2.14           O 0
+ATOM   1335    O ALA A 864      69.572  13.747 -44.480  0.70  6.43           O 0
+ATOM   1343   CD GLU A 865      70.986  15.326 -48.009  0.00  0.00           C 0
+ATOM   1076  NH2AARG A 832      67.376  13.886 -41.758  0.00  0.00           N 0
+ATOM   1349    O GLU A 866      65.390  15.955 -42.392  0.73  2.14           O 0
+ATOM   1356   CA LYS A 867      65.002  18.655 -41.834  0.00  0.00           C 0
+ATOM   1359   CB LYS A 867      65.503  20.077 -42.060  0.00  0.00           C 0
+ATOM   1339    C GLU A 865      67.002  16.014 -45.903  0.00  0.00           C 0
+ATOM   1340    O GLU A 865      66.922  17.186 -46.291  0.33  9.64           O 0
+ATOM   1348    C GLU A 866      65.053  16.713 -43.295  0.00  0.00           C 0
+ATOM   1355    N LYS A 867      64.795  18.003 -43.142  0.63  1.09           N 0
+TER
+END

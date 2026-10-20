@@ -1,0 +1,38 @@
+HEADER
+HEADER This is a pdb format file writen by the programm fpocket.                 
+HEADER It represents the atoms contacted by the voronoi vertices of the pocket.  
+HEADER                                                                           
+HEADER Information about the pocket    18:
+HEADER 0  - Pocket Score                      : -0.1822
+HEADER 1  - Drug Score                        : 0.0672
+HEADER 2  - Number of alpha spheres           :    19
+HEADER 3  - Mean alpha-sphere radius          : 4.0229
+HEADER 4  - Mean alpha-sphere Solvent Acc.    : 0.4686
+HEADER 5  - Mean B-factor of pocket residues  : 0.3481
+HEADER 6  - Hydrophobicity Score              : 39.6667
+HEADER 7  - Polarity Score                    :     4
+HEADER 8  - Amino Acid based volume Score     : 4.1111
+HEADER 9  - Pocket volume (Monte Carlo)       : 234.1769
+HEADER 10 - Pocket volume (convex hull)       : 4.2234
+HEADER 11 - Charge Score                      :     0
+HEADER 12 - Local hydrophobic density Score   : 12.0000
+HEADER 13 - Number of apolar alpha sphere     :    13
+HEADER 14 - Proportion of apolar alpha sphere : 0.6842
+ATOM    232  CG1 VAL A 726      47.861  -2.237 -21.987  0.00  0.00           C 0
+ATOM    717  OG1 THR A 790      53.823  -3.011 -24.835  0.55  4.29           O 0
+ATOM   1177  CD1 LEU A 844      54.800   2.114 -21.316  0.00  0.00           C 0
+ATOM    365   CB ALA A 743      51.726  -3.996 -22.053  0.00  0.00           C 0
+ATOM    510   SDAMET A 766      55.576   0.430 -29.704  0.00  0.00           S 0
+ATOM    718  CG2 THR A 790      54.655  -2.762 -27.102  0.00  0.00           C 0
+ATOM   1257  OG1 THR A 854      54.863   3.340 -25.192  0.83  7.50           O 0
+ATOM    473  OE2 GLU A 762      51.382   2.876 -30.352  0.48  9.64           O 0
+ATOM    382   NZ LYS A 745      48.263   1.633 -29.124  0.63  4.37           N 0
+ATOM    381   CE LYS A 745      47.851   0.205 -28.984  0.00  0.00           C 0
+ATOM    380   CD LYS A 745      47.440  -0.138 -27.561  0.00  0.00           C 0
+ATOM    378   CB LYS A 745      47.724  -2.543 -26.935  0.00  0.00           C 0
+ATOM    695    O LEU A 788      50.509  -5.343 -27.494  0.62  1.07           O 0
+ATOM    233  CG2 VAL A 726      46.522  -0.747 -23.480  0.00  0.00           C 0
+ATOM    700  CD1ALEU A 788      51.084  -1.556 -31.490  0.00  0.00           C 0
+ATOM    696   CBALEU A 788      50.459  -3.577 -30.152  0.00  0.00           C 0
+TER
+END

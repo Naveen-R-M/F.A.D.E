@@ -1,0 +1,63 @@
+HEADER
+HEADER This is a pqr format file writen by the programm fpocket.                 
+HEADER It represent the voronoi vertices of a single pocket found by the         
+HEADER algorithm.                                                                
+HEADER                                                                           
+HEADER Information about the pocket    18:
+HEADER 0  - Pocket Score                      : -0.0778
+HEADER 1  - Drug Score                        : 0.0016
+HEADER 2  - Number of V. Vertices             :    41
+HEADER 3  - Mean alpha-sphere radius          : 3.9847
+HEADER 4  - Mean alpha-sphere SA              : 0.5324
+HEADER 5  - Mean B-factor                     : 0.9157
+HEADER 6  - Hydrophobicity Score              : -4.9167
+HEADER 7  - Polarity Score                    :    10
+HEADER 8  - Volume Score                      : 4.3333
+HEADER 9  - Real volume (approximation)       : 449.0173
+HEADER 10 - Charge Score                      :     0
+HEADER 11 - Local hydrophobic density Score   : 11.5385
+HEADER 12 - Number of apolar alpha sphere     :    13
+HEADER 13 - Proportion of apolar alpha sphere : 0.3171
+ATOM      1    C STP    18     -18.337   2.952   9.572    0.00     3.40
+ATOM      2    C STP    18     -18.217   3.188  11.150    0.00     3.92
+ATOM      3    C STP    18     -18.160   3.031  11.153    0.00     3.88
+ATOM      4    O STP    18     -18.446   4.811   9.434    0.00     3.79
+ATOM      5    O STP    18     -18.551  -3.313  15.652    0.00     4.28
+ATOM      6    O STP    18     -19.936  -1.138  15.232    0.00     4.43
+ATOM      7    O STP    18     -19.314  -0.985  14.513    0.00     4.42
+ATOM      8    O STP    18     -19.909   0.843  16.254    0.00     3.97
+ATOM      9    O STP    18     -15.914   2.548  12.985    0.00     4.25
+ATOM     10    O STP    18     -18.348   4.990   8.656    0.00     3.46
+ATOM     11    C STP    18     -18.522   3.439   9.497    0.00     3.56
+ATOM     12    C STP    18     -18.688   4.217  10.380    0.00     4.07
+ATOM     13    O STP    18     -18.474   3.963   9.083    0.00     3.52
+ATOM     14    O STP    18     -18.533   4.536   9.335    0.00     3.75
+ATOM     15    O STP    18     -18.540   4.386   8.501    0.00     3.44
+ATOM     16    O STP    18     -18.720   4.717  10.477    0.00     4.27
+ATOM     17    O STP    18     -18.914   4.773  10.472    0.00     4.16
+ATOM     18    O STP    18     -18.679   4.709  10.222    0.00     4.14
+ATOM     19    C STP    18     -19.269  -1.270  13.432    0.00     3.87
+ATOM     20    C STP    18     -19.270  -1.219  13.072    0.00     3.64
+ATOM     21    O STP    18     -18.951  -1.056  14.221    0.00     4.44
+ATOM     22    O STP    18     -18.104  -0.115  13.755    0.00     4.37
+ATOM     23    O STP    18     -18.029  -0.071  13.729    0.00     4.37
+ATOM     24    O STP    18     -17.372  -1.012  14.010    0.00     3.96
+ATOM     25    O STP    18     -18.119  -2.716  14.758    0.00     4.24
+ATOM     26    O STP    18     -17.364  -2.235  14.480    0.00     3.95
+ATOM     27    C STP    18     -16.410   1.514  12.474    0.00     4.23
+ATOM     28    O STP    18     -16.635   1.371  11.834    0.00     3.86
+ATOM     29    O STP    18     -15.338   2.483  13.053    0.00     3.94
+ATOM     30    O STP    18     -14.956   2.515  13.135    0.00     3.72
+ATOM     31    O STP    18     -14.933   2.469  13.043    0.00     3.71
+ATOM     32    C STP    18     -16.060   2.358  12.999    0.00     4.34
+ATOM     33    C STP    18     -16.451   1.566  12.629    0.00     4.36
+ATOM     34    C STP    18     -16.269   1.424  12.560    0.00     4.19
+ATOM     35    O STP    18     -15.766   0.863  12.447    0.00     3.65
+ATOM     36    O STP    18     -15.615   1.133  12.418    0.00     3.66
+ATOM     37    C STP    18     -16.741   1.668  12.795    0.00     4.56
+ATOM     38    O STP    18     -17.286   1.069  13.467    0.00     4.60
+ATOM     39    O STP    18     -16.927  -0.402  13.872    0.00     3.94
+ATOM     40    O STP    18     -16.334  -1.764  14.522    0.00     3.58
+ATOM     41    C STP    18     -16.191  -1.826  14.481    0.00     3.48
+TER
+END

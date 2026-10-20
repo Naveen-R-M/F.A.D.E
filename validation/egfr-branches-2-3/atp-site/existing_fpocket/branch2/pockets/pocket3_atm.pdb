@@ -1,0 +1,38 @@
+HEADER
+HEADER This is a pdb format file writen by the programm fpocket.                 
+HEADER It represents the atoms contacted by the voronoi vertices of the pocket.  
+HEADER                                                                           
+HEADER Information about the pocket     3:
+HEADER 0  - Pocket Score                      : 0.0534
+HEADER 1  - Drug Score                        : 0.0040
+HEADER 2  - Number of alpha spheres           :    18
+HEADER 3  - Mean alpha-sphere radius          : 3.7595
+HEADER 4  - Mean alpha-sphere Solvent Acc.    : 0.4130
+HEADER 5  - Mean B-factor of pocket residues  : 0.4288
+HEADER 6  - Hydrophobicity Score              : 40.2000
+HEADER 7  - Polarity Score                    :     4
+HEADER 8  - Amino Acid based volume Score     : 4.2000
+HEADER 9  - Pocket volume (Monte Carlo)       : 209.5891
+HEADER 10 - Pocket volume (convex hull)       : 8.5453
+HEADER 11 - Charge Score                      :     0
+HEADER 12 - Local hydrophobic density Score   : 5.0000
+HEADER 13 - Number of apolar alpha sphere     :     6
+HEADER 14 - Proportion of apolar alpha sphere : 0.3333
+ATOM   1448  CG2 VAL A 876      48.480  19.046 -33.265  0.00  0.00           C 0
+ATOM   1556   NE ARG A 889      47.818  22.240 -39.837  0.47  5.47           N 0
+ATOM   1554   CG ARG A 889      50.157  21.994 -39.172  0.00  0.00           C 0
+ATOM   1432    O GLY A 874      46.106  17.560 -35.793  0.41  5.36           O 0
+ATOM   1559  NH2 ARG A 889      45.538  22.324 -40.028  0.00  0.00           N 0
+ATOM   1526    O ILE A 886      49.902  26.036 -35.394  0.55  7.50           O 0
+ATOM   1524   CA ILE A 886      51.265  25.248 -33.580  0.00  0.00           C 0
+ATOM   1463  CD1 ILE A 878      45.959  23.407 -29.945  0.00  0.00           C 0
+ATOM   1529  CG2 ILE A 886      49.724  26.637 -32.165  0.00  0.00           C 0
+ATOM   1494   CE MET A 881      51.190  21.546 -32.541  0.00  0.00           C 0
+ATOM   1520    O SER A 885      52.094  23.489 -35.540  0.63  1.07           O 0
+ATOM   1584   OH TYR A 891      51.854  19.197 -34.754  0.74  2.14           O 0
+ATOM   1414    O GLU A 872      47.901  18.933 -40.030  0.65  2.14           O 0
+ATOM   1409   CB ALA A 871      51.542  18.023 -39.428  0.00  0.00           C 0
+ATOM   1447  CG1 VAL A 876      49.427  16.789 -33.761  0.00  0.00           C 0
+ATOM   1461  CG1 ILE A 878      46.943  22.353 -29.506  0.00  0.00           C 0
+TER
+END

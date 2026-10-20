@@ -1,0 +1,38 @@
+HEADER
+HEADER This is a pdb format file writen by the programm fpocket.                 
+HEADER It represents the atoms contacted by the voronoi vertices of the pocket.  
+HEADER                                                                           
+HEADER Information about the pocket    14:
+HEADER 0  - Pocket Score                      : -0.0480
+HEADER 1  - Drug Score                        : 0.0031
+HEADER 2  - Number of alpha spheres           :    16
+HEADER 3  - Mean alpha-sphere radius          : 4.0090
+HEADER 4  - Mean alpha-sphere Solvent Acc.    : 0.5860
+HEADER 5  - Mean B-factor of pocket residues  : 0.9839
+HEADER 6  - Hydrophobicity Score              : 20.7778
+HEADER 7  - Polarity Score                    :     6
+HEADER 8  - Amino Acid based volume Score     : 5.3333
+HEADER 9  - Pocket volume (Monte Carlo)       : 247.9187
+HEADER 10 - Pocket volume (convex hull)       : 3.3049
+HEADER 11 - Charge Score                      :     0
+HEADER 12 - Local hydrophobic density Score   : 9.0000
+HEADER 13 - Number of apolar alpha sphere     :    10
+HEADER 14 - Proportion of apolar alpha sphere : 0.6250
+ATOM   1763    N ASP A 223       3.007 -18.394   8.869  0.00  0.00           N 0
+ATOM   1751    N TYR A 222       1.607 -16.204   9.937  0.31  1.09           N 0
+ATOM   1681  CH2 TRP A 212       5.250 -12.930  10.771  0.00  0.00           C 0
+ATOM   1738    O LYS A 220       4.447 -15.384   8.117  0.00  0.00           O 0
+ATOM   1902   CD PRO A 241       4.129 -14.557  15.475  0.00  0.00           C 0
+ATOM   1901   CG PRO A 241       5.571 -14.755  15.860  0.00  0.00           C 0
+ATOM   1767   CB ASP A 223       5.117 -18.790   7.702  0.00  0.00           C 0
+ATOM   1757  CD1 TYR A 222      -1.097 -16.694  12.388  0.00  0.00           C 0
+ATOM   1880    O ARG A 239       0.566 -15.167  17.342  0.55  6.43           O 0
+ATOM   1876  OE2 GLU A 238      -0.190 -19.995  16.509  0.00  0.00           O 0
+ATOM   1679  CZ2 TRP A 212       5.328 -12.678  12.118  0.00  0.00           C 0
+ATOM   1752   CA TYR A 222       1.160 -17.571  10.171  0.00  0.00           C 0
+ATOM   1782  CD1 ILE A 225      -0.056 -21.034  12.389  0.00  0.00           C 0
+ATOM   1766    O ASP A 223       3.807 -21.086   9.333  0.00  0.00           O 0
+ATOM   1895  CD2 LEU A 240       1.371 -13.846  12.331  0.00  0.00           C 0
+ATOM   1889   CA LEU A 240       1.431 -13.378  15.463  0.00  0.00           C 0
+TER
+END

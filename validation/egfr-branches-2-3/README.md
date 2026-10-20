@@ -1,5 +1,9 @@
 # EGFR Branch 2 and Branch 3 validation
 
+## Follow-up: ATP-site correspondence
+
+See [ATP-site validation](atp-site/README.md) for analysis of the existing outputs against 4G5J/0WN. The selected 7SI1 pocket 11 overlaps only 1/24 reference ATP-site residues; predicted pocket 15 overlaps 0/24. These results do not support relaxing the cutoff to pursue pocket 15 as the ATP site. No model or fpocket rerun was performed. Original run records below are retained; the follow-up supersedes their pending ATP-site-validation status.
+
 Production FADE LangGraph runs on Explorer, using private repaired environments and fpocket-only detection. Code baseline: `6da27f3`. Neither run validates the shared installations.
 
 Both used EGFR's **331-residue 7SI1 chain A construct**, not full-length EGFR. RCSB describes 7SI1 as an apo EGFR kinase-domain structure (1.6 Å resolution). Requested scale: 5 generated molecules, at most 2 affinity screens.

@@ -1,0 +1,35 @@
+HEADER
+HEADER This is a pdb format file writen by the programm fpocket.                 
+HEADER It represents the atoms contacted by the voronoi vertices of the pocket.  
+HEADER                                                                           
+HEADER Information about the pocket     6:
+HEADER 0  - Pocket Score                      : 0.0236
+HEADER 1  - Drug Score                        : 0.0002
+HEADER 2  - Number of alpha spheres           :    19
+HEADER 3  - Mean alpha-sphere radius          : 3.5991
+HEADER 4  - Mean alpha-sphere Solvent Acc.    : 0.4300
+HEADER 5  - Mean B-factor of pocket residues  : 0.0814
+HEADER 6  - Hydrophobicity Score              : 11.7500
+HEADER 7  - Polarity Score                    :     6
+HEADER 8  - Amino Acid based volume Score     : 3.7500
+HEADER 9  - Pocket volume (Monte Carlo)       : 73.2213
+HEADER 10 - Pocket volume (convex hull)       : 0.2168
+HEADER 11 - Charge Score                      :     0
+HEADER 12 - Local hydrophobic density Score   : 1.0000
+HEADER 13 - Number of apolar alpha sphere     :     2
+HEADER 14 - Proportion of apolar alpha sphere : 0.1053
+ATOM   1651   OG SER A 899      56.991  18.447 -27.733  0.70  5.36           O 0
+ATOM   1109   CA ARG A 836      55.793  14.531 -31.925  0.00  0.00           C 0
+ATOM   1580  CD2 TYR A 891      55.372  18.277 -34.581  0.00  0.00           C 0
+ATOM   1623  OD1 ASP A 896      59.159  15.478 -30.994  0.52  3.21           O 0
+ATOM   1616   OG SER A 895      59.136  19.670 -33.499  0.00  0.00           O 0
+ATOM   1614    O SER A 895      59.411  19.894 -29.607  0.00  0.00           O 0
+ATOM   1495    N ALA A 882      55.904  22.841 -29.808  0.00  0.00           N 0
+ATOM   1582  CE2 TYR A 891      54.088  18.547 -34.175  0.00  0.00           C 0
+ATOM   1488   CA MET A 881      53.998  21.641 -28.908  0.00  0.00           C 0
+ATOM   1492   CG MET A 881      52.326  20.417 -30.300  0.00  0.00           C 0
+ATOM   1615   CB SER A 895      59.196  20.833 -32.683  0.00  0.00           C 0
+ATOM   1111    O ARG A 836      53.748  15.061 -30.824  0.53  3.21           O 0
+ATOM   1522   OG SER A 885      55.980  21.870 -33.883  0.73  1.07           O 0
+TER
+END

@@ -1,0 +1,62 @@
+Biopython 1.88 numpy 2.2.6
+# EGFR ATP-site validation
+
+Reference: **4G5J chain A, ligand A:1101:0WN**. Site: 24 protein residues within 5 Å of a ligand heavy atom.
+
+Existing fpocket outputs only; no pocket detection, prediction, threshold changes, or molecule generation. Global sequence alignment establishes residue correspondence; all paired Cα atoms determine a rigid fit. Distances use this global fit. Pocket numbers are local identifiers, not equivalent sites across structures.
+
+**Interpretation:** residue overlap and cavity coverage must be considered together. Minimum atom distance alone is not evidence of ATP-site identity. Alpha-sphere coverage below uses a descriptive 3 Å distance to sphere centers, not exact cavity-volume overlap.
+
+## branch2_7SI1
+
+Aligned Cα pairs: 290; identity: 100.0%; global RMSD: 6.197 Å. Site Cα RMSD after global fit: 2.012 Å; after site-only fit: 0.527 Å. Site residues mapped: 24/24.
+
+| Pocket | Drug score | Site overlap | Site recall | Pocket precision | Min distance (Å) | Ligand coverage: pocket atoms ≤5 Å | Ligand coverage: sphere centers ≤3 Å |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 0.000 | 0/24 | 0.0% | 0.0% | 19.64 | 0.0% | 0.0% |
+| 2 | 0.343 | 0/24 | 0.0% | 0.0% | 10.51 | 0.0% | 0.0% |
+| 3 | 0.004 | 0/24 | 0.0% | 0.0% | 16.15 | 0.0% | 0.0% |
+| 4 | 0.339 | 0/24 | 0.0% | 0.0% | 7.48 | 0.0% | 0.0% |
+| 5 | 0.014 | 0/24 | 0.0% | 0.0% | 13.66 | 0.0% | 0.0% |
+| 6 | 0.000 | 0/24 | 0.0% | 0.0% | 14.33 | 0.0% | 0.0% |
+| 7 | 0.021 | 0/24 | 0.0% | 0.0% | 17.90 | 0.0% | 0.0% |
+| 8 | 0.029 | 0/24 | 0.0% | 0.0% | 16.21 | 0.0% | 0.0% |
+| 9 | 0.009 | 0/24 | 0.0% | 0.0% | 24.10 | 0.0% | 0.0% |
+| 10 | 0.005 | 1/24 | 4.2% | 12.5% | 10.36 | 0.0% | 0.0% |
+| 11 | 0.507 | 1/24 | 4.2% | 14.3% | 5.97 | 0.0% | 0.0% |
+| 12 | 0.029 | 0/24 | 0.0% | 0.0% | 8.16 | 0.0% | 0.0% |
+| 13 | 0.000 | 0/24 | 0.0% | 0.0% | 25.19 | 0.0% | 0.0% |
+| 14 | 0.001 | 0/24 | 0.0% | 0.0% | 21.92 | 0.0% | 0.0% |
+| 15 | 0.222 | 1/24 | 4.2% | 3.7% | 8.37 | 0.0% | 0.0% |
+| 16 | 0.051 | 6/24 | 25.0% | 100.0% | 1.50 | 41.2% | 17.6% |
+| 17 | 0.002 | 2/24 | 8.3% | 28.6% | 2.95 | 23.5% | 0.0% |
+| 18 | 0.067 | 9/24 | 37.5% | 100.0% | 1.96 | 55.9% | 38.2% |
+| 19 | 0.000 | 0/24 | 0.0% | 0.0% | 16.89 | 0.0% | 0.0% |
+
+## branch3_predicted
+
+Aligned Cα pairs: 307; identity: 100.0%; global RMSD: 9.338 Å. Site Cα RMSD after global fit: 4.558 Å; after site-only fit: 0.517 Å. Site residues mapped: 24/24.
+
+| Pocket | Drug score | Site overlap | Site recall | Pocket precision | Min distance (Å) | Ligand coverage: pocket atoms ≤5 Å | Ligand coverage: sphere centers ≤3 Å |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 0.011 | 1/24 | 4.2% | 5.9% | 9.48 | 0.0% | 0.0% |
+| 2 | 0.000 | 0/24 | 0.0% | 0.0% | 28.08 | 0.0% | 0.0% |
+| 3 | 0.001 | 0/24 | 0.0% | 0.0% | 22.46 | 0.0% | 0.0% |
+| 4 | 0.003 | 0/24 | 0.0% | 0.0% | 24.08 | 0.0% | 0.0% |
+| 5 | 0.123 | 2/24 | 8.3% | 20.0% | 5.39 | 0.0% | 0.0% |
+| 6 | 0.019 | 0/24 | 0.0% | 0.0% | 25.34 | 0.0% | 0.0% |
+| 7 | 0.001 | 0/24 | 0.0% | 0.0% | 15.12 | 0.0% | 0.0% |
+| 8 | 0.000 | 0/24 | 0.0% | 0.0% | 14.24 | 0.0% | 0.0% |
+| 9 | 0.002 | 3/24 | 12.5% | 42.9% | 1.53 | 26.5% | 0.0% |
+| 10 | 0.002 | 0/24 | 0.0% | 0.0% | 14.61 | 0.0% | 0.0% |
+| 11 | 0.032 | 0/24 | 0.0% | 0.0% | 7.26 | 0.0% | 0.0% |
+| 12 | 0.001 | 0/24 | 0.0% | 0.0% | 6.52 | 0.0% | 0.0% |
+| 13 | 0.024 | 10/24 | 41.7% | 90.9% | 1.08 | 58.8% | 23.5% |
+| 14 | 0.003 | 0/24 | 0.0% | 0.0% | 14.03 | 0.0% | 0.0% |
+| 15 | 0.420 | 0/24 | 0.0% | 0.0% | 11.08 | 0.0% | 0.0% |
+| 16 | 0.004 | 0/24 | 0.0% | 0.0% | 24.03 | 0.0% | 0.0% |
+| 17 | 0.001 | 0/24 | 0.0% | 0.0% | 9.14 | 0.0% | 0.0% |
+| 18 | 0.002 | 0/24 | 0.0% | 0.0% | 22.31 | 0.0% | 0.0% |
+| 19 | 0.000 | 0/24 | 0.0% | 0.0% | 9.32 | 0.0% | 0.0% |
+
+VALIDATION_PASS: transform assertions and output generation complete

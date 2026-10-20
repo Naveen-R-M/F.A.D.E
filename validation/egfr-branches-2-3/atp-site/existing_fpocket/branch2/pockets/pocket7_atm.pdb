@@ -1,0 +1,50 @@
+HEADER
+HEADER This is a pdb format file writen by the programm fpocket.                 
+HEADER It represents the atoms contacted by the voronoi vertices of the pocket.  
+HEADER                                                                           
+HEADER Information about the pocket     7:
+HEADER 0  - Pocket Score                      : 0.0181
+HEADER 1  - Drug Score                        : 0.0213
+HEADER 2  - Number of alpha spheres           :    29
+HEADER 3  - Mean alpha-sphere radius          : 3.9759
+HEADER 4  - Mean alpha-sphere Solvent Acc.    : 0.6507
+HEADER 5  - Mean B-factor of pocket residues  : 0.1787
+HEADER 6  - Hydrophobicity Score              : 3.8889
+HEADER 7  - Polarity Score                    :     7
+HEADER 8  - Amino Acid based volume Score     : 4.0000
+HEADER 9  - Pocket volume (Monte Carlo)       : 494.6116
+HEADER 10 - Pocket volume (convex hull)       : 40.2729
+HEADER 11 - Charge Score                      :     3
+HEADER 12 - Local hydrophobic density Score   : 10.0000
+HEADER 13 - Number of apolar alpha sphere     :    11
+HEADER 14 - Proportion of apolar alpha sphere : 0.3793
+ATOM   2281   CB ALA A 972      72.384  13.198 -12.109  0.00  0.00           C 0
+ATOM   2292   CGAARG A 973      77.773  13.551 -11.439  0.00  0.00           C 0
+ATOM   2298   CZAARG A 973      79.552  11.014 -12.770  0.00  0.00           C 0
+ATOM   2250    O SER A 969      75.339  14.360 -13.845  0.68  2.14           O 0
+ATOM   2300  NH1AARG A 973      79.518  10.338 -11.633  0.00  0.00           N 0
+ATOM   2302  NH2AARG A 973      79.716  10.354 -13.915  0.64  8.75           N 0
+ATOM    965   CG GLN A 820      67.501   7.241 -17.503  0.00  0.00           C 0
+ATOM    968  NE2 GLN A 820      67.492   6.059 -15.410  0.62  9.84           N 0
+ATOM    990   NZ LYS A 823      73.257   7.210 -19.770  0.00  0.00           N 0
+ATOM    958  CG1 VAL A 819      71.079  10.779 -18.252  0.00  0.00           C 0
+ATOM    957   CB VAL A 819      70.052  11.501 -17.406  0.00  0.00           C 0
+ATOM    959  CG2 VAL A 819      70.713  12.658 -16.666  0.00  0.00           C 0
+ATOM    931  OD1 ASN A 816      70.373  10.246 -12.022  0.77  6.43           O 0
+ATOM   2253   OGASER A 969      74.092  12.708 -17.844  0.94  5.36           O 0
+ATOM   2251   CBASER A 969      74.944  13.435 -16.984  0.00  0.00           C 0
+ATOM   2294   CDAARG A 973      79.236  13.173 -11.615  0.00  0.00           C 0
+ATOM   2290   CBAARG A 973      77.527  14.477 -10.245  0.00  0.00           C 0
+ATOM   2288    OAARG A 973      76.788  14.484  -7.243  0.00  0.00           O 0
+ATOM   2284   CAAARG A 973      76.211  14.159  -9.533  0.00  0.00           C 0
+ATOM    928    O ASN A 816      67.375  10.060 -15.762  0.76  1.07           O 0
+ATOM   2247   CAASER A 969      74.126  14.162 -15.917  0.00  0.00           C 0
+ATOM   2280    O ALA A 972      73.722  13.001  -9.389  0.55  5.36           O 0
+ATOM   2279    C ALA A 972      73.907  13.884 -10.237  0.00  0.00           C 0
+ATOM    896  NE2 GLN A 812      71.294  11.151  -9.106  0.00  0.00           N 0
+ATOM    930   CG ASN A 816      69.563   9.327 -11.956  0.00  0.00           C 0
+ATOM    926   CA ASN A 816      68.111  10.645 -13.563  0.00  0.00           C 0
+ATOM    929   CB ASN A 816      68.217   9.426 -12.650  0.00  0.00           C 0
+ATOM    573  NE2AHIS A 773      68.302   4.619 -19.911  0.67  5.47           N 0
+TER
+END
